@@ -1,0 +1,176 @@
+<div
+  [class]="'blk' + (isFocused ? ' is-focused' : '') + (showPin ? ' has-comments' : '')"
+  (mouseenter)="hover.set(true)"
+  (mouseleave)="hover.set(false)"
+>
+  <div class="blk-gutter">
+    @if (showHandle) {
+      <div class="block-menu">
+        <button (click)="onAddAfter.emit(idx)" title="Insert below">
+          <svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+        </button>
+        <button title="Drag to move">
+          <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="4" cy="3" r=".9" fill="currentColor"/><circle cx="8" cy="3" r=".9" fill="currentColor"/><circle cx="4" cy="6" r=".9" fill="currentColor"/><circle cx="8" cy="6" r=".9" fill="currentColor"/><circle cx="4" cy="9" r=".9" fill="currentColor"/><circle cx="8" cy="9" r=".9" fill="currentColor"/></svg>
+        </button>
+      </div>
+    }
+  </div>
+  
+  <div class="blk-body">
+    @switch (block.type) {
+      @case ('h1') {
+        <h1 
+          class="doc-h1" 
+          [attr.contenteditable]="readOnly ? false : true"
+          (focus)="onFocus.emit(idx)"
+          (blur)="handleTextBlur($event)"
+          (keydown)="handleKeyDown($event)"
+        >{{block.text}}</h1>
+      }
+      @case ('h2') {
+        <h2 
+          class="doc-h2" 
+          [attr.contenteditable]="readOnly ? false : true"
+          (focus)="onFocus.emit(idx)"
+          (blur)="handleTextBlur($event)"
+          (keydown)="handleKeyDown($event)"
+        >{{block.text}}</h2>
+      }
+      @case ('h3') {
+        <h3 
+          class="doc-h3" 
+          [attr.contenteditable]="readOnly ? false : true"
+          (focus)="onFocus.emit(idx)"
+          (blur)="handleTextBlur($event)"
+          (keydown)="handleKeyDown($event)"
+        >{{block.text}}</h3>
+      }
+      @case ('p') {
+        <p class="doc-p" [innerHTML]="renderInline(block.text!)"></p>
+      }
+      @case ('ul') {
+        <ul class="doc-list">
+          @for (item of block.items; track $index) {
+            <li>{{item}}</li>
+          }
+        </ul>
+      }
+      @case ('ol') {
+        <ol class="doc-list doc-list--ol">
+          @for (item of block.items; track $index) {
+            <li>{{item}}</li>
+          }
+        </ol>
+      }
+      @case ('todo') {
+        <ul class="doc-todo">
+          @for (item of block.items; track $index; let i = $index) {
+            @if (typeof item === 'object') {
+              <li [class]="item.done ? 'is-done' : ''">
+                <button 
+                  [class]="'todo-check' + (item.done ? ' is-checked' : '')" 
+                  (click)="toggleTodo(i)"
+                >
+                  @if (item.done) {
+                    <svg width="9" height="9" viewBox="0 0 9 9"><path d="M1.5 4.8L3.5 6.8L7.5 2.5" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  }
+                </button>
+                <span>{{item.text}}</span>
+                @if (item.commentCount && item.commentCount > 0) {
+                  <span class="todo-comments">{{item.commentCount}} 💬</span>
+                }
+              </li>
+            }
+          }
+        </ul>
+      }
+      @case ('callout') {
+        <div [class]="'callout callout--' + block.tone">
+          <div class="callout-icon">
+            @switch (block.tone) {
+              @case ('info') { ℹ }
+              @case ('warn') { ⚠ }
+              @case ('danger') { ⛔ }
+            }
+          </div>
+          <div class="callout-body" [innerHTML]="renderInline(block.text)"></div>
+        </div>
+      }
+      @case ('code') {
+        <div class="code-block">
+          <div class="code-hd">
+            <span class="code-lang">{{block.lang}}</span>
+            <button type="button" class="code-copy" (click)="copyCode()">Copy</button>
+          </div>
+          <pre class="code-pre"><code [innerHTML]="highlightCode(block.code || '', block.lang || '')"></code></pre>
+        </div>
+      }
+      @case ('quote') {
+        <blockquote class="doc-quote" [innerHTML]="renderInline(block.text)"></blockquote>
+      }
+      @case ('divider') {
+        <hr class="doc-divider" />
+      }
+      @case ('table') {
+        <div class="doc-table-wrap">
+          <table class="doc-table">
+            <thead>
+              <tr>
+                @for (header of block.headers; track $index) {
+                  <th>{{header}}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of block.rows; track $index) {
+                <tr>
+                  @for (cell of row; track $index) {
+                    <td>{{cell}}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+      @case ('image') {
+        <figure class="doc-figure">
+          <div class="doc-image-placeholder">
+            <span class="doc-image-label">{{block.placeholder || 'IMAGE'}}</span>
+          </div>
+          @if (block.caption) {
+            <figcaption>{{block.caption}}</figcaption>
+          }
+        </figure>
+      }
+      @case ('video') {
+        <figure class="doc-figure">
+          <div class="doc-video-placeholder">
+            <button class="play-btn" aria-label="Play">
+              <svg width="20" height="20" viewBox="0 0 20 20"><path d="M6 4l10 6-10 6V4z" fill="currentColor"/></svg>
+            </button>
+            <span class="doc-video-label">VIDEO</span>
+            <span class="doc-video-dur">04:12</span>
+          </div>
+          @if (block.caption) {
+            <figcaption>{{block.caption}}</figcaption>
+          }
+        </figure>
+      }
+    }
+  </div>
+  
+  <div class="blk-pin">
+    @if (showPin) {
+      <button class="comment-pin" (click)="onCommentClick.emit(idx)" [title]="commentCount + ' comment' + (commentCount !== 1 ? 's' : '')">
+        <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 3a1 1 0 011-1h6a1 1 0 011 1v4a1 1 0 01-1 1H6.5L4 10.5V8H3a1 1 0 01-1-1V3z" stroke="currentColor" strokeWidth="1.2" fill="var(--accent)" fillOpacity=".15" strokeLinejoin="round"/></svg>
+        <span>{{commentCount}}</span>
+      </button>
+    }
+    @if (showCommentAdd) {
+      <button type="button" class="blk-comment-add" (click)="onCommentClick.emit(idx)" title="Add comment">
+        <svg width="13" height="13" viewBox="0 0 13 13"><path d="M2 3a1 1 0 011-1h7a1 1 0 011 1v5a1 1 0 01-1 1H7l-3 3V9H3a1 1 0 01-1-1V3z" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinejoin="round"/></svg>
+      </button>
+    }
+  </div>
+</div>

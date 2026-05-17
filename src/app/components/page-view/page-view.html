@@ -1,0 +1,234 @@
+<div class="page-scroll">
+  <div [class]="'page-content page-content--' + pageWidth">
+    <!-- Page Header -->
+    <div class="page-hd">
+      <div class="page-hd-meta">
+        @if (!isAuthRfcPinned()) {
+          <div class="page-hd-icon-wrap">
+            <button
+              type="button"
+              class="page-hd-icon-btn"
+              title="Change page icon"
+              (click)="iconPickerOpen.set(!iconPickerOpen())"
+            >
+              <app-icon-display [icon]="page.icon" [size]="28" klass="page-hd-icon" />
+              @if (!page.icon) {
+                <span class="page-hd-icon-placeholder">+</span>
+              }
+            </button>
+            @if (iconPickerOpen()) {
+              <div class="page-icon-popover" (click)="$event.stopPropagation()">
+                <app-icon-picker
+                  [icon]="page.icon ?? ''"
+                  variant="page"
+                  (iconChange)="onIconChange.emit($event); iconPickerOpen.set(false)"
+                />
+              </div>
+            }
+          </div>
+        } @else {
+          <app-icon-display [icon]="page.icon" [size]="28" klass="page-hd-icon" />
+        }
+        <span class="page-hd-path">{{page.breadcrumb.slice(0, -1).join(' / ')}}</span>
+        <span class="page-hd-dot">·</span>
+        <span class="page-hd-version">v{{page.version}}</span>
+        <span class="page-hd-dot">·</span>
+        <span>Updated {{page.updatedAt}} by {{page.updatedBy}}</span>
+      </div>
+      <h1 
+        class="page-hd-title" 
+        [attr.contenteditable]="isAuthRfcPinned() ? false : true"
+        (blur)="handleTitleBlur($event)"
+      >{{page.title}}</h1>
+      <div class="page-hd-foot">
+        <app-avatar-stack [ids]="page.contributors" [max]="5" [people]="people" />
+        <span class="page-hd-contrib">{{page.contributors.length}} contributors</span>
+      </div>
+    </div>
+
+    @if (usesMarkdownDoc()) {
+      <div class="page-md-root">
+        <div class="page-md-banner">
+          <span class="page-md-badge">Markdown</span>
+          @if (!mdEditing()) {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="mdEditing.set(true)">Edit document</button>
+          }
+        </div>
+        @if (!mdEditing()) {
+          <article class="page-md-article">
+            <app-markdown-view variant="document" [source]="page.markdownBody!" />
+          </article>
+        } @else {
+          <div class="page-md-editor">
+            <app-markdown-composer
+              #pageMdComposer
+              layout="dialog"
+              previewVariant="document"
+              [showToolbarSubmit]="false"
+              [initialBody]="page.markdownBody ?? ''"
+              hint="Preview renders sanitized HTML · Save applies changes"
+            />
+            <div class="page-md-editor-actions">
+              <button type="button" class="btn btn-ghost" (click)="mdEditing.set(false)">Cancel</button>
+              <button type="button" class="btn btn-primary" (click)="saveMarkdownEditor(pageMdComposer.currentDraft())">
+                Save
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+    <!-- Blocks -->
+    <div class="blocks">
+      @for (block of blocks; track $index; let i = $index) {
+        <app-block
+          [block]="block"
+          [idx]="i"
+          [readOnly]="isAuthRfcPinned()"
+          [isFocused]="focusBlockIdx === i"
+          [commentCount]="getCommentCount(i)"
+          (onFocus)="onFocusBlock.emit($event)"
+          (onChange)="handleBlockChange($event)"
+          (onAddAfter)="handleAddAfter($event)"
+          (onDelete)="handleDeleteBlock($event)"
+          (onCommentClick)="onAddComment.emit($event)"
+        />
+      }
+      @if (!isAuthRfcPinned()) {
+      <button class="blk-add" (click)="handleAddAfter(blocks.length - 1)">
+        <svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+        <span>Add a block</span>
+      </button>
+      }
+    </div>
+    }
+
+    <!-- Page Footer: Reactions + Discussion -->
+    <div class="page-foot">
+      <div class="reactions">
+        @for (emoji of Object.keys(reactions); track emoji) {
+          <button 
+            [class]="'reaction' + (isMyReaction(emoji) ? ' is-mine' : '')" 
+            (click)="onReact.emit(emoji)"
+          >
+            <span class="reaction-emoji">{{emoji}}</span>
+            <span class="reaction-count">{{getReactionUsers(emoji).length}}</span>
+          </button>
+        }
+        <div class="reaction-add-wrap">
+          <button class="reaction reaction-add" (click)="reactionPickerOpen.set(!reactionPickerOpen())">
+            <svg width="13" height="13" viewBox="0 0 13 13"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.2" fill="none"/><circle cx="5" cy="5.5" r=".7" fill="currentColor"/><circle cx="8" cy="5.5" r=".7" fill="currentColor"/><path d="M4.5 8c.5.7 1.3 1.2 2 1.2S8 8.7 8.5 8" stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round"/></svg>
+            <span>+</span>
+          </button>
+          @if (reactionPickerOpen()) {
+            <div class="reaction-picker">
+              @for (e of reactionPalette; track e) {
+                <button class="reaction-pick" (click)="handleReactClick(e)">{{e}}</button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="page-thread">
+        <div class="page-thread-hd">
+          <span>Discussion</span>
+          <span class="page-thread-count">{{pageThread.length}} {{pageThread.length === 1 ? 'comment' : 'comments'}}</span>
+        </div>
+        @for (comment of pageThread; track comment.id) {
+          <div class="page-cmt">
+            <span class="avatar" [style.width.px]="28" [style.height.px]="28" [style.background]="getPerson(comment.author).color">{{comment.author[0]}}</span>
+            <div class="page-cmt-body">
+              <div class="page-cmt-meta">
+                <strong>{{getPerson(comment.author).name}}</strong> 
+                <span class="cmt-time">{{comment.at}}</span>
+              </div>
+              <div class="page-cmt-text page-cmt-text--md">
+                <app-markdown-view [source]="comment.text" />
+              </div>
+              <app-comment-reactions
+                [reactions]="comment.reactions"
+                (toggleEmoji)="onCommentReaction.emit({ commentId: comment.id, emoji: $event })"
+              />
+              @if (comment.replies && comment.replies.length > 0) {
+                <div class="page-cmt-replies">
+                  @for (reply of comment.replies; track reply.id) {
+                    <div class="page-cmt page-cmt--reply">
+                      <span class="avatar" [style.width.px]="22" [style.height.px]="22" [style.background]="getPerson(reply.author).color">{{reply.author[0]}}</span>
+                      <div class="page-cmt-body">
+                        <div class="page-cmt-meta">
+                          <strong>{{getPerson(reply.author).name}}</strong> 
+                          <span class="cmt-time">{{reply.at}}</span>
+                        </div>
+                        <div class="page-cmt-text page-cmt-text--md">
+                          <app-markdown-view [source]="reply.text" />
+                        </div>
+                        <app-comment-reactions
+                          [reactions]="reply.reactions"
+                          (toggleEmoji)="onCommentReaction.emit({ commentId: reply.id, emoji: $event })"
+                        />
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+              <div class="page-cmt-composer-row">
+                <span class="avatar" [style.width.px]="20" [style.height.px]="20" style="background: #ec4899">M</span>
+                <app-page-comment-composer
+                  placeholder="Reply…"
+                  submitLabel="Reply"
+                  (submitted)="onReplyPageComment.emit({ commentId: comment.id, text: $event })"
+                />
+              </div>
+            </div>
+          </div>
+        }
+        <div class="page-cmt page-cmt--new">
+          <span class="avatar" [style.width.px]="28" [style.height.px]="28" style="background: #ec4899">M</span>
+          <div class="page-cmt-body">
+            <app-page-comment-composer
+              placeholder="Add a comment…"
+              submitLabel="Comment"
+              (submitted)="onAddPageComment.emit($event)"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Block Insert Menu -->
+  @if (showInsertMenu()) {
+    <div class="cmd-overlay" (click)="showInsertMenu.set(null)">
+      <div class="cmd cmd--insert" (click)="$event.stopPropagation()">
+        <div class="cmd-input-wrap">
+          <span style="font-size: 13px; color: var(--fg-muted)">+</span>
+          <input class="cmd-input" placeholder="Insert block…" />
+        </div>
+        <div class="cmd-list">
+          @for (item of [
+            {type: 'h1', label: 'Heading 1', icon: 'H₁'},
+            {type: 'h2', label: 'Heading 2', icon: 'H₂'},
+            {type: 'h3', label: 'Heading 3', icon: 'H₃'},
+            {type: 'p', label: 'Text', icon: '¶'},
+            {type: 'ul', label: 'Bulleted list', icon: '•'},
+            {type: 'ol', label: 'Numbered list', icon: '1.'},
+            {type: 'todo', label: 'To-do list', icon: '☐'},
+            {type: 'callout', label: 'Callout', icon: 'ℹ'},
+            {type: 'code', label: 'Code', icon: '</>'},
+            {type: 'quote', label: 'Quote', icon: '❝'},
+            {type: 'divider', label: 'Divider', icon: '—'},
+            {type: 'image', label: 'Image', icon: '🖼'},
+            {type: 'video', label: 'Video', icon: '▶'},
+            {type: 'table', label: 'Table', icon: '▦'}
+          ]; track item.type) {
+            <button class="cmd-item" (click)="insertBlock(showInsertMenu()!.idx, $any(item.type))">
+              <span class="cmd-item-icon insert-ic">{{item.icon}}</span>
+              <span class="cmd-item-title">{{item.label}}</span>
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

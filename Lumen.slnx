@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src-backend/">
+    <Project Path="src-backend/LumenApi/LumenApi.csproj" />
+  </Folder>
+</Solution>

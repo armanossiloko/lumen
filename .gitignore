@@ -1,0 +1,75 @@
+# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+
+# --- Angular ---
+/dist
+/tmp
+/out-tsc
+/bazel-out
+/.angular/cache
+__screenshots__/
+
+# --- Node / npm ---
+/node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tsbuildinfo
+
+# Vitest / unit tests (via @angular/build:unit-test)
+/coverage
+
+# --- .NET / ASP.NET Core (src-backend/LumenApi, net10.0) ---
+**/bin/
+**/obj/
+**/out/
+*.user
+*.userosscache
+*.suo
+.vs/
+TestResults/
+[Bb]enchmarkDotNet.Artifacts/
+*.nupkg
+*.snupkg
+
+# Local SQLite database (ConnectionStrings:DefaultConnection → lumen.db)
+*.db
+*.db-shm
+*.db-wal
+
+# Local config overrides (optional pattern; keep secrets out of git)
+**/appsettings.*.local.json
+
+# --- Environment variables (frontend or tooling) ---
+.env
+.env.*
+!.env.example
+
+# --- Legacy / tooling ---
+/connect.lock
+/libpeerconnection.log
+testem.log
+/typings
+.sass-cache/
+
+# --- IDEs and editors ---
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
+.history/*
+
+# --- System files ---
+.DS_Store
+Thumbs.db

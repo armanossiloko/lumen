@@ -1,0 +1,185 @@
+<div [class]="'app theme-' + state.tweaks().theme + ' width-wide'">
+  @if (state.loading()) {
+    <div class="loading-screen">
+      <div class="loading-spinner"></div>
+      <p>Loading...</p>
+    </div>
+  } @else {
+    @if (state.error()) {
+      <div class="api-banner" role="status">{{ state.error() }}</div>
+    }
+    <app-sidebar
+      [tree]="state.tree()"
+      [pageIds]="allPageIds()"
+      [currentId]="state.currentId()"
+      [unreadCount]="state.unreadCount()"
+      [workspaces]="state.workspaces()"
+      [currentWorkspace]="currentWorkspace()"
+      [expandHintId]="state.sidebarExpandHint()"
+      (onSelect)="handleSelectPage($event)"
+      (onTreeChange)="state.persistTreeChange($event)"
+      (treeReorder)="state.reorderTree($event.dragId, $event.targetId)"
+      (onOpenSearch)="state.showCmd.set(true)"
+      (onOpenInbox)="state.showInbox.set(true)"
+      (onOpenCreatePage)="state.openCreatePage($event.parentId, $event.parentTitle)"
+      (onOpenCreateFolder)="state.openCreateFolder($event.parentId, $event.parentTitle)"
+      (renamePageConfirm)="state.renamePageFromSidebar($event)"
+      (workspaceChange)="handleWorkspaceChange($event)"
+      (openTrash)="state.loadTrash()"
+      (changeIcon)="state.openIconEdit($event)"
+    />
+
+    <main class="main">
+      <app-header
+        [page]="currentPage()"
+        [theme]="state.tweaks().theme"
+        [unreadCount]="state.unreadCount()"
+        [viewers]="viewers()"
+        [people]="state.people()"
+        [crumbLinkIds]="crumbLinkIds()"
+        [canGoBack]="state.canGoBack()"
+        [canGoForward]="state.canGoForward()"
+        (selectPage)="state.selectPage($event)"
+        (goBack)="state.goBack()"
+        (goForward)="state.goForward()"
+        (themeChange)="state.setTweak('theme', $event)"
+        (openSearch)="state.showCmd.set(true)"
+        (share)="openShare()"
+        (openActions)="state.showActions.set(true)"
+        (openInbox)="state.showInbox.set(true)"
+      />
+
+      <div class="main-body">
+        <app-page-view
+          [page]="currentPage()"
+          [blocks]="currentPage().blocks"
+          [comments]="state.comments()"
+          [focusBlockIdx]="state.focusBlockIdx()"
+          [reactions]="pageReactions()"
+          [pageThread]="pageThread()"
+          [pageWidth]="'wide'"
+          [people]="state.people()"
+          (onTitleChange)="handleTitleChange($event)"
+          (onBlocksChange)="handleBlocksChange($event)"
+          (onMarkdownBodySave)="state.saveCurrentPageMarkdownBody($event)"
+          (onResolveComment)="state.resolveComment($event)"
+          (onReplyComment)="state.replyComment($event.key, $event.text)"
+          (onAddComment)="state.addComment($event)"
+          (onFocusBlock)="state.focusBlockIdx.set($event)"
+          (onReact)="state.addReaction($event)"
+          (onAddPageComment)="state.addPageComment($event)"
+          (onReplyPageComment)="state.replyPageComment($event.commentId, $event.text)"
+          (onCommentReaction)="state.toggleCommentReaction($event.commentId, $event.emoji)"
+          (onSelectPage)="state.selectPage($event)"
+          (onIconChange)="state.updateCurrentPageIcon($event)"
+        />
+
+        <app-comments-panel
+          [open]="state.showCommentsPanel() && Object.keys(pageThreadComments()).length > 0"
+          [threads]="pageThreadComments()"
+          [page]="currentPage()"
+          [blockMap]="blockMap()"
+          [people]="state.people()"
+          (onClose)="state.showCommentsPanel.set(false)"
+          (onResolve)="state.resolveComment($event)"
+          (onReply)="state.replyComment($event.key, $event.text, $event.parentCommentId)"
+          (onJump)="state.focusBlockIdx.set($event)"
+          (onCommentReaction)="state.toggleCommentReaction($event.commentId, $event.emoji)"
+        />
+      </div>
+    </main>
+
+    <app-icon-edit-modal
+      [ctx]="state.iconEditUi()"
+      (cancel)="state.closeIconEdit()"
+      (save)="state.saveIconEdit($event)"
+    />
+
+    <app-create-navigation-modal
+      [ctx]="state.createNavUi()"
+      (cancel)="state.closeCreateNav()"
+      (confirmCreate)="state.confirmCreateNavigation($event)"
+    />
+
+    <app-command-palette
+      [open]="state.showCmd()"
+      [pages]="state.pages()"
+      (onClose)="state.showCmd.set(false)"
+      (onSelect)="state.selectPage($event); state.showCmd.set(false)"
+      (onCreatePage)="handlePaletteCreate($event)"
+      (onTodayNotes)="state.openTodayNotes(); state.showCmd.set(false)"
+      (onBrowseTemplates)="state.openTemplates(); state.showCmd.set(false)"
+    />
+
+    <app-block-comment-modal
+      [blockIdx]="state.blockCommentBlockIdx()"
+      (cancel)="state.cancelBlockComment()"
+      (submitComment)="state.submitBlockComment($event)"
+    />
+
+    <app-share-modal
+      [open]="state.showShare()"
+      [page]="currentPage()"
+      [people]="state.people()"
+      [members]="shareMembersDraft"
+      [linkSharing]="shareLinkDraft"
+      (membersChange)="shareMembersDraft = $event"
+      (linkSharingChange)="shareLinkDraft = $event"
+      (copyLink)="copyShareLink()"
+      (save)="saveShare()"
+      (onClose)="state.showShare.set(false)"
+    />
+
+    <app-page-actions-menu
+      [open]="state.showActions()"
+      [isFavorite]="state.isFavorite(state.currentId())"
+      (onClose)="state.showActions.set(false)"
+      (onAction)="state.handlePageAction($event)"
+    />
+
+    <app-inbox-panel
+      [open]="state.showInbox()"
+      [items]="state.inbox()"
+      [people]="state.people()"
+      (onClose)="state.showInbox.set(false)"
+      (onMarkRead)="state.markInboxRead($event)"
+      (onMarkAllRead)="state.markAllInboxRead()"
+      (onJump)="state.selectPage($event); state.showInbox.set(false)"
+    />
+
+    <app-history-modal
+      [open]="state.showHistory()"
+      [entries]="state.pageHistory()"
+      (onClose)="state.showHistory.set(false)"
+      (restore)="state.restoreHistoryVersion(state.currentId(), $event)"
+    />
+
+    <app-backlinks-modal
+      [open]="state.showBacklinks()"
+      [links]="state.backlinks()"
+      (onClose)="state.showBacklinks.set(false)"
+      (openPage)="state.selectPage($event); state.showBacklinks.set(false)"
+    />
+
+    <app-trash-panel
+      [open]="state.showTrash()"
+      [pages]="state.trashPages()"
+      (onClose)="state.showTrash.set(false)"
+      (restore)="state.restoreFromTrash($event)"
+    />
+
+    <app-templates-modal
+      [open]="state.showTemplates()"
+      [templates]="state.templates()"
+      (onClose)="state.showTemplates.set(false)"
+      (select)="state.createFromTemplate($event)"
+    />
+
+    @if (!state.showCommentsPanel() && Object.keys(pageThreadComments()).length > 0) {
+      <button class="cmt-fab" (click)="state.showCommentsPanel.set(true)" title="Show comments">
+        <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 4a1 1 0 011-1h8a1 1 0 011 1v5a1 1 0 01-1 1H7l-3 3v-3H3a1 1 0 01-1-1V4z" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinejoin="round"/></svg>
+        <span>{{ getUnresolvedCommentCount() }}</span>
+      </button>
+    }
+  }
+</div>

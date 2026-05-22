@@ -1,0 +1,107 @@
+[
+  {
+    "pageId": "welcome",
+    "emoji": "👋",
+    "userId": "MC"
+  },
+  {
+    "pageId": "welcome",
+    "emoji": "👋",
+    "userId": "JD"
+  },
+  {
+    "pageId": "welcome",
+    "emoji": "👋",
+    "userId": "RP"
+  },
+  {
+    "pageId": "welcome",
+    "emoji": "🎉",
+    "userId": "DL"
+  },
+  {
+    "pageId": "engineering/auth-rfc",
+    "emoji": "🚀",
+    "userId": "RP"
+  },
+  {
+    "pageId": "engineering/auth-rfc",
+    "emoji": "🚀",
+    "userId": "DL"
+  },
+  {
+    "pageId": "engineering/auth-rfc",
+    "emoji": "🚀",
+    "userId": "MC"
+  },
+  {
+    "pageId": "engineering/auth-rfc",
+    "emoji": "👀",
+    "userId": "SO"
+  },
+  {
+    "pageId": "engineering/auth-rfc",
+    "emoji": "✅",
+    "userId": "JD"
+  },
+  {
+    "pageId": "engineering/onboarding",
+    "emoji": "🌱",
+    "userId": "MC"
+  },
+  {
+    "pageId": "engineering/onboarding",
+    "emoji": "🌱",
+    "userId": "SO"
+  },
+  {
+    "pageId": "engineering/onboarding",
+    "emoji": "❤️",
+    "userId": "RP"
+  },
+  {
+    "pageId": "product/roadmap",
+    "emoji": "🔥",
+    "userId": "JD"
+  },
+  {
+    "pageId": "product/roadmap",
+    "emoji": "🔥",
+    "userId": "DL"
+  },
+  {
+    "pageId": "product/roadmap",
+    "emoji": "👀",
+    "userId": "SO"
+  },
+  {
+    "pageId": "product/roadmap",
+    "emoji": "👀",
+    "userId": "RP"
+  },
+  {
+    "pageId": "handbook/values",
+    "emoji": "💯",
+    "userId": "MC"
+  },
+  {
+    "pageId": "handbook/values",
+    "emoji": "💯",
+    "userId": "JD"
+  },
+  {
+    "pageId": "handbook/values",
+    "emoji": "💯",
+    "userId": "RP"
+  },
+  {
+    "pageId": "handbook/values",
+    "emoji": "💯",
+    "userId": "DL"
+  },
+  {
+    "pageId": "handbook/values",
+    "emoji": "💯",
+    "userId": "SO"
+  }
+]

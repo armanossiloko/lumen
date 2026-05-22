@@ -1,0 +1,46 @@
+[
+  {
+    "id": "n1",
+    "author": "RP",
+    "verb": "commented on",
+    "pageId": "engineering/auth-rfc",
+    "pageTitle": "Authentication v3",
+    "snippet": "Worth calling out that we're using ULIDs not UUIDs…",
+    "at": "2h ago",
+    "unread": true,
+    "userId": "MC"
+  },
+  {
+    "id": "n2",
+    "author": "DL",
+    "verb": "edited",
+    "pageId": "engineering/auth-rfc",
+    "pageTitle": "Authentication v3",
+    "snippet": "Updated rollout phase table",
+    "at": "Yesterday",
+    "unread": true,
+    "userId": "MC"
+  },
+  {
+    "id": "n3",
+    "author": "MC",
+    "verb": "shared",
+    "pageId": "product/roadmap",
+    "pageTitle": "Q2 2026 Roadmap",
+    "snippet": "Maya shared this with you",
+    "at": "2d ago",
+    "unread": false,
+    "userId": "MC"
+  },
+  {
+    "id": "n4",
+    "author": "SO",
+    "verb": "mentioned you in",
+    "pageId": "handbook/hiring",
+    "pageTitle": "Hiring Rubric",
+    "snippet": "@you can you review the comms dimension?",
+    "at": "3d ago",
+    "unread": true,
+    "userId": "MC"
+  }
+]

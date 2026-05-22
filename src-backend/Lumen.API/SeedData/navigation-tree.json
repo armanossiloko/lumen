@@ -1,0 +1,186 @@
+[
+  {
+    "id": "workspace-acme",
+    "title": "Acme",
+    "kind": "workspace",
+    "children": [
+      {
+        "id": "welcome",
+        "title": "Welcome to Lumen",
+        "icon": "✦",
+        "kind": "page"
+      },
+      {
+        "id": "engineering",
+        "title": "Engineering",
+        "icon": "⌘",
+        "kind": "page",
+        "children": [
+          {
+            "id": "engineering/onboarding",
+            "title": "Onboarding",
+            "icon": "🌱",
+            "kind": "page"
+          },
+          {
+            "id": "engineering/architecture",
+            "title": "System Architecture",
+            "icon": "🏗",
+            "kind": "page"
+          },
+          {
+            "id": "engineering/rfcs",
+            "title": "RFCs",
+            "icon": "📐",
+            "kind": "folder",
+            "children": [
+              {
+                "id": "engineering/auth-rfc",
+                "title": "Authentication v3",
+                "icon": "📐",
+                "kind": "page"
+              },
+              {
+                "id": "engineering/rfc-cache",
+                "title": "Edge cache rollout",
+                "icon": "📐",
+                "kind": "page"
+              },
+              {
+                "id": "engineering/rfc-obs",
+                "title": "Observability platform",
+                "icon": "📐",
+                "kind": "page"
+              }
+            ]
+          },
+          {
+            "id": "engineering/runbooks",
+            "title": "Runbooks",
+            "icon": "📓",
+            "kind": "folder",
+            "children": [
+              {
+                "id": "engineering/incidents",
+                "title": "Incident response",
+                "icon": "🚨",
+                "kind": "page"
+              },
+              {
+                "id": "engineering/deploys",
+                "title": "Deploys & rollbacks",
+                "icon": "🚀",
+                "kind": "page"
+              },
+              {
+                "id": "engineering/db-ops",
+                "title": "Database operations",
+                "icon": "🗄",
+                "kind": "page"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "product",
+        "title": "Product",
+        "icon": "◐",
+        "kind": "page",
+        "children": [
+          {
+            "id": "product/roadmap",
+            "title": "Q2 2026 Roadmap",
+            "icon": "🗺",
+            "kind": "page"
+          },
+          {
+            "id": "product/research",
+            "title": "User Research",
+            "icon": "🔍",
+            "kind": "page"
+          },
+          {
+            "id": "product/specs",
+            "title": "Specs",
+            "icon": "📋",
+            "kind": "folder",
+            "children": [
+              {
+                "id": "product/spec-workspaces",
+                "title": "Workspaces GA",
+                "icon": "📋",
+                "kind": "page"
+              },
+              {
+                "id": "product/spec-pricing",
+                "title": "Pricing v2",
+                "icon": "📋",
+                "kind": "page"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "handbook",
+        "title": "Handbook",
+        "icon": "📘",
+        "kind": "page",
+        "children": [
+          {
+            "id": "handbook/values",
+            "title": "Operating Principles",
+            "icon": "✦",
+            "kind": "page"
+          },
+          {
+            "id": "handbook/hiring",
+            "title": "Hiring Rubric",
+            "icon": "👥",
+            "kind": "page"
+          },
+          {
+            "id": "handbook/comp",
+            "title": "Compensation",
+            "icon": "💰",
+            "kind": "page"
+          },
+          {
+            "id": "handbook/timeoff",
+            "title": "Time off",
+            "icon": "🌴",
+            "kind": "page"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "private",
+    "title": "Private",
+    "kind": "workspace",
+    "children": [
+      {
+        "id": "drafts",
+        "title": "Drafts",
+        "icon": "✎",
+        "kind": "folder",
+        "children": [
+          {
+            "id": "drafts/notes",
+            "title": "Random thoughts",
+            "icon": "✎",
+            "kind": "page"
+          },
+          {
+            "id": "drafts/q3-plan",
+            "title": "Q3 planning notes",
+            "icon": "✎",
+            "kind": "page"
+          }
+        ]
+      }
+    ]
+  }
+]

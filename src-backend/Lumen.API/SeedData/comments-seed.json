@@ -1,0 +1,62 @@
+[
+  {
+    "id": "c1",
+    "author": "RP",
+    "text": "Worth calling out that we're using ULIDs not UUIDs — different sort behavior matters for the index strategy.",
+    "at": "Apr 28",
+    "resolved": false,
+    "pageId": "engineering/auth-rfc",
+    "blockIdx": 5,
+    "parentCommentId": null,
+    "repliesJson": "[]",
+    "reactionsJson": "{}"
+  },
+  {
+    "id": "c2",
+    "author": "DL",
+    "text": "Should we add a row for the rollback drill we did last week?",
+    "at": "Apr 30",
+    "resolved": false,
+    "pageId": "engineering/auth-rfc",
+    "blockIdx": 7,
+    "parentCommentId": null,
+    "repliesJson": "[]",
+    "reactionsJson": "{}"
+  },
+  {
+    "id": "c3",
+    "author": "JD",
+    "text": "Good call — adding it now.",
+    "at": "Apr 30",
+    "resolved": false,
+    "pageId": "engineering/auth-rfc",
+    "blockIdx": 7,
+    "parentCommentId": null,
+    "repliesJson": "[]",
+    "reactionsJson": "{}"
+  },
+  {
+    "id": "c4",
+    "author": "SO",
+    "text": "Pricing v2 timing concerns me — the experiment design isn't locked. Can we sync Thursday?",
+    "at": "Yesterday",
+    "resolved": false,
+    "pageId": "product/roadmap",
+    "blockIdx": 5,
+    "parentCommentId": null,
+    "repliesJson": "[]",
+    "reactionsJson": "{}"
+  },
+  {
+    "id": "pc1",
+    "author": "RP",
+    "text": "Reviewed end-to-end — overall LGTM. Two threads above to address before we ship.",
+    "at": "Apr 30",
+    "resolved": false,
+    "pageId": "engineering/auth-rfc",
+    "blockIdx": null,
+    "parentCommentId": null,
+    "repliesJson": "[{\"id\":\"pc1r1\",\"author\":\"JD\",\"text\":\"Both addressed in the latest revision. Re-requesting review.\",\"at\":\"2h ago\"}]",
+    "reactionsJson": "{}"
+  }
+]

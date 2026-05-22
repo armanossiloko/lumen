@@ -1,0 +1,19 @@
+[
+  {
+    "id": "private",
+    "title": "Private",
+    "kind": "workspace",
+    "children": [
+      {
+        "id": "drafts",
+        "title": "Drafts",
+        "icon": "✎",
+        "kind": "folder",
+        "children": [
+          { "id": "drafts/notes", "title": "Random thoughts", "icon": "✎", "kind": "page" },
+          { "id": "drafts/q3-plan", "title": "Q3 planning notes", "icon": "✎", "kind": "page" }
+        ]
+      }
+    ]
+  }
+]

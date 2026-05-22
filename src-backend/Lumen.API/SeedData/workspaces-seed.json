@@ -1,0 +1,23 @@
+[
+  {
+    "id": "acme",
+    "name": "Acme",
+    "initial": "A",
+    "color": "var(--accent)",
+    "members": 87
+  },
+  {
+    "id": "lab",
+    "name": "Acme Labs",
+    "initial": "L",
+    "color": "#6366f1",
+    "members": 12
+  },
+  {
+    "id": "personal",
+    "name": "Personal",
+    "initial": "M",
+    "color": "#10b981",
+    "members": 1
+  }
+]

@@ -1,5 +1,8 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
   <Folder Name="/src-backend/">
-    <Project Path="src-backend/LumenApi/LumenApi.csproj" />
+    <Project Path="src-backend/Lumen.API/Lumen.API.csproj" />
   </Folder>
 </Solution>

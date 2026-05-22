@@ -19,7 +19,7 @@ pnpm-debug.log*
 # Vitest / unit tests (via @angular/build:unit-test)
 /coverage
 
-# --- .NET / ASP.NET Core (src-backend/LumenApi, net10.0) ---
+# --- .NET / ASP.NET Core (src-backend/Lumen.API, net10.0) ---
 **/bin/
 **/obj/
 **/out/

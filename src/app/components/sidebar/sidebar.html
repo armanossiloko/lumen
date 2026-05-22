@@ -3,7 +3,32 @@
     [current]="currentWorkspace"
     [workspaces]="workspaces"
     (onChange)="workspaceChange.emit($event)"
+    (onCreateWorkspace)="workspaceCreate.emit($event)"
   />
+
+  @if (favoritePages.length > 0) {
+    <div class="sb-favorites">
+      <div class="sb-section-label">Favorites</div>
+      @for (p of favoritePages; track p.id) {
+        <button type="button" class="sb-fav-row" (click)="onSelect.emit({ id: p.id })">
+          <span>{{ p.icon }}</span>
+          <span>{{ p.title }}</span>
+        </button>
+      }
+    </div>
+  }
+
+  @if (recentPages.length > 0) {
+    <div class="sb-recent">
+      <div class="sb-section-label">Recent</div>
+      @for (p of recentPages; track p.id) {
+        <button type="button" class="sb-fav-row" (click)="onSelect.emit({ id: p.id })">
+          <span>{{ p.icon }}</span>
+          <span>{{ p.title }}</span>
+        </button>
+      }
+    </div>
+  }
 
   <div class="sb-quick">
     <button class="sb-quick-btn" (click)="onOpenSearch.emit()">
@@ -114,9 +139,11 @@
       <svg width="13" height="13" viewBox="0 0 13 13"><path d="M3 4h7l-.5 7a1 1 0 01-1 1H4.5a1 1 0 01-1-1L3 4zM5 4V2.5a1 1 0 011-1h1a1 1 0 011 1V4M2 4h9" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
       <span>Trash</span>
     </button>
-    <div class="sb-storage">
-      <div class="sb-storage-bar"><div class="sb-storage-fill" [style.width.%]="34"></div></div>
-      <div class="sb-storage-text">3.4 GB of 10 GB used</div>
-    </div>
+    @if (storageText) {
+      <div class="sb-storage">
+        <div class="sb-storage-bar"><div class="sb-storage-fill" [style.width.%]="storagePercent"></div></div>
+        <div class="sb-storage-text">{{ storageText }}</div>
+      </div>
+    }
   </div>
 </aside>

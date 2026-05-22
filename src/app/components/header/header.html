@@ -72,6 +72,9 @@
     <button class="hd-icon-btn" (click)="openActions.emit()" title="Page actions">
       <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="3" cy="7" r="1.1" fill="currentColor"/><circle cx="7" cy="7" r="1.1" fill="currentColor"/><circle cx="11" cy="7" r="1.1" fill="currentColor"/></svg>
     </button>
-    <app-avatar initial="M" color="#ec4899" [size]="26" title="Maya Chen (you)" />
+    @if (currentUser) {
+      <button type="button" class="hd-sign-out" (click)="signOut.emit()" title="Sign out">Sign out</button>
+      <app-avatar [initial]="currentUser.initial" [color]="currentUser.color" [size]="26" [title]="currentUser.name" />
+    }
   </div>
 </header>

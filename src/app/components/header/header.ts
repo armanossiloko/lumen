@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Page } from '../../models';
+import { Page, CurrentUser } from '../../models';
 
 @Component({
   selector: 'app-avatar',
@@ -85,6 +85,7 @@ export class Header {
   @Input() crumbLinkIds: (string | null)[] = [];
   @Input() canGoBack: boolean = false;
   @Input() canGoForward: boolean = false;
+  @Input() currentUser: CurrentUser | null = null;
 
   @Output() selectPage = new EventEmitter<string>();
   @Output() themeChange = new EventEmitter<string>();
@@ -92,6 +93,7 @@ export class Header {
   @Output() share = new EventEmitter<void>();
   @Output() openActions = new EventEmitter<void>();
   @Output() openInbox = new EventEmitter<void>();
+  @Output() signOut = new EventEmitter<void>();
   @Output() goBack = new EventEmitter<void>();
   @Output() goForward = new EventEmitter<void>();
 }

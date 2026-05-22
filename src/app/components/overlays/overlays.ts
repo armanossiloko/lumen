@@ -77,17 +77,54 @@ import { IconDisplay } from '../icon-picker/icon-display';
 export class CommandPalette {
   @Input() open = false;
   @Input() pages: { [key: string]: Page } = {};
+  @Input() movePageId: string | null = null;
+  @Input() tree: import('../../models').TreeNode[] = [];
   
   @Output() onClose = new EventEmitter<void>();
   @Output() onSelect = new EventEmitter<string>();
   @Output() onCreatePage = new EventEmitter<string>();
   @Output() onTodayNotes = new EventEmitter<void>();
   @Output() onBrowseTemplates = new EventEmitter<void>();
+  @Output() onMoveTarget = new EventEmitter<string>();
   
   query = signal('');
   idx = signal(0);
+
+  private flattenMoveTargets(nodes: import('../../models').TreeNode[], depth = 0): Array<{
+    kind: 'target';
+    id: string;
+    title: string;
+    sub: string;
+    icon: string;
+    hint: string;
+  }> {
+    const out: Array<{ kind: 'target'; id: string; title: string; sub: string; icon: string; hint: string }> = [];
+    for (const n of nodes) {
+      if (n.id === this.movePageId) continue;
+      if (n.kind === 'workspace' || n.kind === 'folder' || n.kind === 'page') {
+        out.push({
+          kind: 'target',
+          id: n.id,
+          title: n.title,
+          sub: ' '.repeat(depth * 2) + (n.kind === 'workspace' ? 'Workspace' : n.kind),
+          icon: n.icon ?? (n.kind === 'folder' ? '📁' : '📄'),
+          hint: 'Move here',
+        });
+      }
+      if (n.children?.length) out.push(...this.flattenMoveTargets(n.children, depth + 1));
+    }
+    return out;
+  }
   
   filteredItems = computed(() => {
+    if (this.movePageId) {
+      const targets = this.flattenMoveTargets(this.tree);
+      const filtered = this.query()
+        ? targets.filter((it) => it.title.toLowerCase().includes(this.query().toLowerCase()))
+        : targets;
+      return filtered.slice(0, 12);
+    }
+
     const all = Object.values(this.pages).map(p => ({
       kind: 'page' as const,
       id: p.id,
@@ -129,7 +166,9 @@ export class CommandPalette {
   }
   
   handleSelect(item: { kind: string; id: string }) {
-    if (item.kind === 'page') {
+    if (this.movePageId) {
+      this.onMoveTarget.emit(item.id);
+    } else if (item.kind === 'page') {
       this.onSelect.emit(item.id);
     } else if (item.id === 'create') {
       this.onCreatePage.emit(this.query());
@@ -204,6 +243,9 @@ export class CommandPalette {
                   {{thread.resolved ? 'Reopen' : '✓ Resolve'}}
                 </button>
                 <button class="cmt-act" (click)="$event.stopPropagation(); onJump.emit(thread.blockIdx)">View in page</button>
+                @if (thread.comments[0]; as root) {
+                  <button class="cmt-act cmt-act--danger" (click)="$event.stopPropagation(); onDelete.emit({ commentId: root.id, threadKey: thread.key })">Delete</button>
+                }
               </div>
               <div class="cmt-composer-row" (click)="$event.stopPropagation()">
                 <app-avatar initial="M" color="#ec4899" [size]="20" />
@@ -233,6 +275,7 @@ export class CommentsPanel {
   @Output() onReply = new EventEmitter<{ key: string; text: string; parentCommentId?: string }>();
   @Output() onJump = new EventEmitter<number>();
   @Output() onCommentReaction = new EventEmitter<{ commentId: string; emoji: string }>();
+  @Output() onDelete = new EventEmitter<{ commentId: string; threadKey: string }>();
 
   filter = signal('open');
   

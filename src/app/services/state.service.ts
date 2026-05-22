@@ -11,6 +11,7 @@ import {
   moveTreeNode,
   prepareNavigationTree,
   removeTreeNodeById,
+  removeTreeNode,
   renameTreeNodeTitle,
   stripWorkspaceBreadcrumbPrefix,
   uniqueChildId,
@@ -18,24 +19,31 @@ import {
 } from '../navigation/tree-utils';
 import type { IconEditContext } from '../components/icon-picker/icon-edit-modal';
 import { apiWorkspaceId, treeWorkspaceId } from '../navigation/workspace-utils';
-import { AUTH_RFC_PAGE_ID, getAuthRfcCanonicalPage } from '../content/auth-rfc-canonical';
-import { DataService } from './data.service';
 import { ApiService, ShareMember, ShareSettings, PageTemplate } from './api.service';
+import type { AuthSession, CurrentUser, StorageInfo, Person } from '../models';
+import { AuthTokenService } from './auth-token.service';
 import { RealtimeService } from './realtime.service';
+import { buildPrintDocument } from '../print/build-print-document';
+import { isApiUnreachable } from '../utils/http-error';
 
 @Injectable({
   providedIn: 'root'
 })
 export class StateService {
-  private dataService = inject(DataService);
   private apiService = inject(ApiService);
   private realtime = inject(RealtimeService);
   private router = inject(Router);
+  private authToken = inject(AuthTokenService);
 
-  readonly currentUserId = this.apiService.currentUserId;
+  /** Set from `GET /api/auth/me` on startup. */
+  currentUser = signal<CurrentUser | null>(null);
+  currentUserId = computed(() => this.currentUser()?.userId ?? '');
+
+  storage = signal<StorageInfo | null>(null);
+  recentPages = signal<string[]>([]);
 
   // Current state
-  currentId = signal<string>('engineering/auth-rfc');
+  currentId = signal<string>('welcome');
   currentWorkspaceId = signal<string>('acme');
   favorites = signal<Set<string>>(new Set());
   trashPages = signal<Page[]>([]);
@@ -78,6 +86,9 @@ export class StateService {
   /** Sidebar expands this node id when set (cleared next microtask). */
   sidebarExpandHint = signal<string | null>(null);
 
+  /** Command palette in “move page” mode — page id being moved, or null. */
+  movePageUi = signal<string | null>(null);
+
   /** Browser-style linear history (page ids). */
   private historyBack = signal<string[]>([]);
   private historyForward = signal<string[]>([]);
@@ -87,7 +98,14 @@ export class StateService {
   // Tweaks
   tweaks = signal<TweakDefaults>({
     theme: 'dark',
-    accent: '#ec4899'
+    accent: '#ec4899',
+    pageWidth: 'wide',
+  });
+
+  favoritePages = computed(() => {
+    const ids = [...this.favorites()];
+    const pages = this.pages();
+    return ids.map((id) => pages[id]).filter((p): p is Page => !!p);
   });
 
   // Computed values
@@ -109,13 +127,8 @@ export class StateService {
   /** Always returns a page — never null (avoids template errors when API id is missing). */
   currentPage = computed((): Page => {
     const id = this.currentId();
-    if (id === AUTH_RFC_PAGE_ID) {
-      return getAuthRfcCanonicalPage();
-    }
     const fromApi = this.pages()[id];
     if (fromApi) return fromApi;
-    const fromMock = this.dataService.pages()[id];
-    if (fromMock) return fromMock;
 
     const treeNode = findTreeNode(this.tree(), id);
     const path = findNodePath(this.tree(), id);
@@ -157,6 +170,7 @@ export class StateService {
 
   private initRouterSync() {
     const syncFromUrl = () => {
+      if (!this.authToken.get()) return;
       const match = this.router.url.match(/^\/p\/(.+?)(?:\?|#|$)/);
       if (match?.[1]) {
         const id = decodeURIComponent(match[1]);
@@ -176,7 +190,14 @@ export class StateService {
     this.realtime.onInboxItem = (item) => {
       this.inbox.update((items) => [item, ...items]);
     };
-    void this.realtime.connect(this.currentUserId);
+    effect(() => {
+      const uid = this.currentUserId();
+      if (uid) void this.realtime.connect(uid);
+    });
+  }
+
+  getPerson(id: string) {
+    return this.people()[id] ?? { name: id, color: '#888' };
   }
 
   pageIdFromRoute(): string | null {
@@ -188,36 +209,129 @@ export class StateService {
     this.loading.set(true);
     this.error.set(null);
 
+    if (!this.authToken.get()) {
+      this.loading.set(false);
+      return;
+    }
+
+    this.apiService
+      .getMe()
+      .toPromise()
+      .then((me) => {
+        if (me) this.currentUser.set(me);
+        return this.loadWorkspaceData(me?.userId ?? '');
+      })
+      .catch((err) => {
+        console.error('Failed to load data:', err);
+        this.loading.set(false);
+        if (err?.status === 401) {
+          this.authToken.clear();
+          this.currentUser.set(null);
+          void this.goToLogin();
+          return;
+        }
+        if (isApiUnreachable(err)) {
+          this.error.set('api_unreachable');
+        }
+      });
+  }
+
+  onLoginSuccess(session: AuthSession, returnUrl?: string) {
+    this.authToken.set(session.token);
+    this.currentUser.set({
+      userId: session.userId,
+      name: session.name,
+      initial: session.initial,
+      color: session.color,
+    });
+    this.loading.set(true);
+    this.error.set(null);
+
+    const target =
+      returnUrl && returnUrl.startsWith('/p/') ? returnUrl : '/p/welcome';
+
+    void this.router.navigateByUrl(target).then(() => {
+      void this.loadWorkspaceData(session.userId);
+    });
+  }
+
+  private goToLogin() {
+    const returnUrl = this.router.url.startsWith('/p/') ? this.router.url : undefined;
+    return this.router.navigate(
+      ['/login'],
+      returnUrl ? { queryParams: { returnUrl } } : {},
+    );
+  }
+
+  logout() {
+    this.apiService.logout().subscribe({
+      next: () => this.clearSession(),
+      error: () => this.clearSession(),
+    });
+  }
+
+  private clearSession() {
+    this.authToken.clear();
+    this.realtime.disconnect();
+    this.currentUser.set(null);
+    this.pages.set({});
+    this.tree.set([]);
+    this.inbox.set([]);
+    this.comments.set({});
+    this.pageComments.set({});
+    this.reactions.set({});
+    this.favorites.set(new Set());
+    this.showCmd.set(false);
+    this.showShare.set(false);
+    this.showInbox.set(false);
+    this.showActions.set(false);
+    this.loading.set(false);
+    this.error.set(null);
+    void this.goToLogin();
+  }
+
+  /** Re-run bootstrap after the backend comes online. */
+  retryBootstrap() {
+    this.loadData();
+  }
+
+  private loadWorkspaceData(userId: string) {
     const wsId = this.currentWorkspaceId();
 
-    Promise.all([
-      this.apiService.getPreferences().toPromise(),
+    return Promise.all([
+      this.apiService.getPreferences(userId).toPromise(),
       this.apiService.getPages(wsId).toPromise(),
       this.apiService.getComments().toPromise(),
       this.apiService.getReactions().toPromise(),
-      this.apiService.getInbox().toPromise(),
+      this.apiService.getInbox(userId).toPromise(),
       this.apiService.getPeople().toPromise(),
       this.apiService.getWorkspaces().toPromise(),
       this.apiService.getTree(wsId).toPromise(),
-      this.apiService.getFavorites().toPromise(),
+      this.apiService.getFavorites(userId).toPromise(),
       this.apiService.getTemplates().toPromise(),
-    ]).then(([prefs, pages, comments, reactions, inbox, people, workspaces, tree, favs, templates]) => {
+      this.apiService.getStorage(userId).toPromise(),
+    ]).then(([prefs, pages, comments, reactions, inbox, people, workspaces, tree, favs, templates, storage]) => {
       if (prefs?.currentWorkspaceId) this.currentWorkspaceId.set(prefs.currentWorkspaceId);
       if (prefs?.theme) this.tweaks.update((t) => ({ ...t, theme: prefs.theme as TweakDefaults['theme'] }));
       if (prefs?.accent) this.tweaks.update((t) => ({ ...t, accent: prefs.accent }));
+      if (prefs?.pageWidth) {
+        this.tweaks.update((t) => ({
+          ...t,
+          pageWidth: prefs.pageWidth as TweakDefaults['pageWidth'],
+        }));
+      }
+      if (prefs?.recentPages?.length) this.recentPages.set(prefs.recentPages);
       if (favs) this.favorites.set(new Set(favs));
+      if (storage) this.storage.set(storage);
       if (templates) this.templates.set(templates);
       if (pages) {
-        const rec = pages as Record<string, unknown>;
         const fromApi = Object.fromEntries(
-          Object.entries(rec).map(([id, p]) => [id, this.normalizeRemotePage(p as Record<string, unknown>, id)])
+          Object.entries(pages as Record<string, unknown>).map(([id, p]) => [
+            id,
+            this.normalizeRemotePage(p as Record<string, unknown>, id),
+          ]),
         );
-        const mock = this.dataService.pages();
-        const merged: Record<string, Page> = { ...mock };
-        for (const [id, p] of Object.entries(fromApi)) {
-          merged[id] = p;
-        }
-        this.pages.set(merged);
+        this.pages.set(fromApi);
       }
       if (comments) {
         // Separate block comments from page comments
@@ -251,27 +365,14 @@ export class StateService {
         }
       }
       const routeId = this.pageIdFromRoute();
-      if (routeId) this.currentId.set(routeId);
+      if (routeId) {
+        this.currentId.set(routeId);
+      } else if (prefs?.recentPages?.[0]) {
+        this.currentId.set(prefs.recentPages[0]);
+      } else if (Object.keys(this.pages()).length) {
+        this.currentId.set(Object.keys(this.pages())[0]);
+      }
       this.loading.set(false);
-    }).catch(err => {
-      console.error('Failed to load data:', err);
-      this.loading.set(false);
-      
-      // Fallback to mocked data
-      this.pages.set(this.dataService.pages());
-      this.comments.set({...this.dataService.defaultComments()});
-      this.pageComments.set({...this.dataService.defaultPageComments()});
-      this.reactions.set({...this.dataService.defaultReactions()});
-      this.inbox.set([...this.dataService.defaultInbox()]);
-      this.people.set(this.dataService.people());
-      this.workspaces.set(this.dataService.workspaces());
-      const mockPages = this.dataService.pages();
-      const pageIds = new Set(Object.keys(mockPages));
-      this.tree.set(prepareNavigationTree(this.dataService.tree(), pageIds));
-      // Keep the app usable; show a slim banner instead of replacing the UI
-      this.error.set(
-        "Couldn't reach the API — showing built-in demo data. Start the backend on port 5013 to use SQLite."
-      );
     });
   }
 
@@ -346,9 +447,6 @@ export class StateService {
   /** Map API / JSON page shapes into our Page model (always a blocks[]). */
   private normalizeRemotePage(raw: Record<string, unknown>, fallbackId: string): Page {
     const id = String(raw['id'] ?? raw['Id'] ?? fallbackId);
-    if (id === AUTH_RFC_PAGE_ID) {
-      return getAuthRfcCanonicalPage();
-    }
 
     const blocksRaw = raw['blocks'] ?? raw['Blocks'];
     const blocks = Array.isArray(blocksRaw) ? (blocksRaw as Page['blocks']) : [];
@@ -448,8 +546,7 @@ export class StateService {
   pageIdForBreadcrumbIndex(breadcrumb: string[], index: number): string | null {
     if (index >= breadcrumb.length - 1) return null;
     const want = breadcrumb.slice(0, index + 1);
-    const merged: Record<string, Page> = { ...this.dataService.pages(), ...this.pages() };
-    for (const [pageId, p] of Object.entries(merged)) {
+    for (const [pageId, p] of Object.entries(this.pages())) {
       if (
         p.breadcrumb.length === want.length &&
         want.every((s, i) => p.breadcrumb[i] === s)
@@ -488,23 +585,63 @@ export class StateService {
     this.currentId.set(id);
     this.focusBlockIdx.set(null);
     void this.router.navigateByUrl('/p/' + encodeURIComponent(id));
+    this.pushRecentPage(id);
+    if (!this.pages()[id]) void this.ensurePageRecord(id);
+  }
+
+  private pushRecentPage(pageId: string) {
+    const uid = this.currentUserId();
+    if (!uid) return;
+    const next = [pageId, ...this.recentPages().filter((id) => id !== pageId)].slice(0, 12);
+    this.recentPages.set(next);
+    this.apiService.putPreferences(uid, { recentPages: next }).subscribe();
+  }
+
+  private ensurePageRecord(pageId: string) {
+    const node = findTreeNode(this.tree(), pageId);
+    if (!node || node.kind !== 'page') return;
+    const path = findNodePath(this.tree(), pageId);
+    const breadcrumb = path
+      ? stripWorkspaceBreadcrumbPrefix(path.filter((n) => n.kind !== 'workspace').map((n) => n.title))
+      : [node.title];
+    const uid = this.currentUserId();
+    const page: Page = {
+      id: pageId,
+      title: node.title,
+      icon: node.icon,
+      breadcrumb,
+      updatedBy: this.getPerson(uid).name,
+      updatedAt: new Date().toISOString(),
+      contributors: uid ? [uid] : [],
+      blocks: [{ type: 'h1', text: node.title }],
+      version: 1,
+    };
+    this.apiService
+      .createPage({ ...page, workspaceId: this.currentWorkspaceId() })
+      .subscribe({
+        next: () => this.pages.update((p) => ({ ...p, [pageId]: page })),
+        error: (err) => console.error('Failed to create page record:', err),
+      });
   }
 
   switchWorkspace(apiWorkspaceIdValue: string) {
     if (apiWorkspaceIdValue === this.currentWorkspaceId()) return;
     this.currentWorkspaceId.set(apiWorkspaceIdValue);
-    this.apiService.putPreferences(this.currentUserId, { currentWorkspaceId: apiWorkspaceIdValue }).subscribe();
+    const uid = this.currentUserId();
+    if (uid) {
+      this.apiService.putPreferences(uid, { currentWorkspaceId: apiWorkspaceIdValue }).subscribe();
+    }
     const wsId = apiWorkspaceIdValue;
     Promise.all([
       this.apiService.getPages(wsId).toPromise(),
       this.apiService.getTree(wsId).toPromise(),
     ]).then(([pages, tree]) => {
       if (pages) {
-        const merged = { ...this.dataService.pages() };
+        const fromApi: Record<string, Page> = {};
         for (const [id, p] of Object.entries(pages)) {
-          merged[id] = this.normalizeRemotePage(p as unknown as Record<string, unknown>, id);
+          fromApi[id] = this.normalizeRemotePage(p as unknown as Record<string, unknown>, id);
         }
-        this.pages.set(merged);
+        this.pages.set(fromApi);
       }
       if (tree) {
         const pageIds = new Set(Object.keys(this.pages()));
@@ -529,16 +666,18 @@ export class StateService {
   }
 
   toggleFavorite(pageId: string) {
+    const uid = this.currentUserId();
+    if (!uid) return;
     const fav = this.favorites();
     const next = new Set(fav);
     if (next.has(pageId)) {
       next.delete(pageId);
       this.favorites.set(next);
-      this.apiService.removeFavorite(pageId).subscribe();
+      this.apiService.removeFavorite(pageId, uid).subscribe();
     } else {
       next.add(pageId);
       this.favorites.set(next);
-      this.apiService.addFavorite(pageId).subscribe();
+      this.apiService.addFavorite(pageId, uid).subscribe();
     }
   }
 
@@ -552,10 +691,11 @@ export class StateService {
     } catch {
       /* use defaults below */
     }
-    const page = this.pages()[pageId] ?? this.dataService.pages()[pageId];
-    const members: ShareMember[] = (page?.contributors ?? [this.currentUserId]).map((userId) => ({
+    const page = this.pages()[pageId];
+    const uid = this.currentUserId();
+    const members: ShareMember[] = (page?.contributors ?? (uid ? [uid] : [])).map((userId) => ({
       userId,
-      permission: userId === this.currentUserId ? 'owner' : 'edit',
+      permission: userId === uid ? 'owner' : 'edit',
     }));
     this.shareSettings.set({ pageId, linkSharingEnabled: false, members });
   }
@@ -639,7 +779,6 @@ export class StateService {
   }
 
   deletePageToTrash(pageId: string) {
-    if (pageId === AUTH_RFC_PAGE_ID) return;
     const tree = removeTreeNodeById([...this.tree()], pageId);
     this.tree.set(tree);
     this.persistTree(tree);
@@ -656,7 +795,9 @@ export class StateService {
   }
 
   duplicatePage(pageId: string) {
-    this.apiService.duplicatePage(pageId).subscribe({
+    const uid = this.currentUserId();
+    if (!uid) return;
+    this.apiService.duplicatePage(pageId, uid).subscribe({
       next: (res) => {
         const page = this.normalizeRemotePage(res.page as unknown as Record<string, unknown>, res.id);
         this.pages.update((p) => ({ ...p, [res.id]: page }));
@@ -740,26 +881,87 @@ export class StateService {
         this.deletePageToTrash(pageId);
         break;
       case 'move':
+        this.movePageUi.set(pageId);
         this.showCmd.set(true);
         break;
     }
     this.showActions.set(false);
   }
 
+  movePageToParent(pageId: string, newParentId: string) {
+    if (pageId === newParentId) return;
+    const tree = [...this.tree()];
+    const { tree: without, removed } = removeTreeNode(tree, pageId);
+    if (!removed) return;
+    const nextTree = insertTreeChild(without, newParentId, removed);
+    this.tree.set(nextTree);
+    this.persistTree(nextTree);
+
+    const cur = this.pages()[pageId];
+    if (cur && removed.kind === 'page') {
+      const parentPath = findNodePath(nextTree, newParentId);
+      const crumbTitles = parentPath
+        ? breadcrumbForNewPage(parentPath, cur.title)
+        : [cur.title];
+      const next: Page = { ...cur, breadcrumb: crumbTitles };
+      this.pages.update((p) => ({ ...p, [pageId]: next }));
+      this.apiService.updatePage(pageId, { breadcrumb: crumbTitles }).subscribe({
+        error: (err) => console.error('Failed to update breadcrumb after move:', err),
+      });
+    }
+    this.movePageUi.set(null);
+    this.showCmd.set(false);
+  }
+
+  createWorkspace(name: string): void {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const id =
+      trimmed
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || `ws-${Date.now()}`;
+    this.apiService.createWorkspace({ id, name: trimmed }).subscribe({
+      next: (ws) => {
+        this.workspaces.update((list) => [...list, ws]);
+        this.switchWorkspace(ws.id);
+      },
+      error: (err) => console.error('Failed to create workspace:', err),
+    });
+  }
+
+  reorderCurrentPageBlocks(fromIdx: number, toIdx: number) {
+    if (fromIdx === toIdx) return;
+    const cur = this.mergeCurrentPage();
+    const blocks = [...(cur.blocks ?? [])];
+    if (fromIdx < 0 || fromIdx >= blocks.length || toIdx < 0 || toIdx >= blocks.length) return;
+    const [moved] = blocks.splice(fromIdx, 1);
+    blocks.splice(toIdx, 0, moved);
+    this.updateCurrentPageBlocks(blocks);
+  }
+
   exportPagePdf() {
     const page = this.currentPage();
     const w = window.open('', '_blank');
     if (!w) return;
-    const body = page.markdownBody
-      ? `<pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(page.markdownBody)}</pre>`
-      : (page.blocks ?? [])
-          .map((b) => `<p>${escapeHtml(JSON.stringify(b))}</p>`)
-          .join('');
-    w.document.write(
-      `<html><head><title>${escapeHtml(page.title)}</title></head><body><h1>${escapeHtml(page.title)}</h1>${body}</body></html>`,
-    );
+
+    const html = buildPrintDocument(page, {
+      updatedByLabel: this.getPerson(page.updatedBy).name,
+    });
+
+    w.document.open();
+    w.document.write(html);
     w.document.close();
-    w.print();
+
+    const printWhenReady = () => {
+      w.focus();
+      w.print();
+    };
+    if (w.document.readyState === 'complete') {
+      printWhenReady();
+    } else {
+      w.onload = printWhenReady;
+    }
   }
 
   private reloadPages() {
@@ -813,7 +1015,6 @@ export class StateService {
 
   updateCurrentPageIcon(icon: string) {
     const id = this.currentId();
-    if (id === AUTH_RFC_PAGE_ID) return;
     this.updateNodeIcon(id, icon.trim(), 'page');
   }
 
@@ -828,7 +1029,7 @@ export class StateService {
     this.persistTree(nextTree);
 
     if (kind === 'page') {
-      const cur = this.pages()[nodeId] ?? this.dataService.pages()[nodeId];
+      const cur = this.pages()[nodeId];
       if (!cur) return;
       const next: Page = iconValue ? { ...cur, icon: iconValue } : { ...cur };
       if (!iconValue) delete (next as { icon?: string }).icon;
@@ -879,9 +1080,9 @@ export class StateService {
       title: ev.title,
       ...(ev.icon ? { icon: ev.icon } : {}),
       breadcrumb: crumbTitles,
-      updatedBy: 'MC',
+      updatedBy: this.getPerson(this.currentUserId()).name,
       updatedAt: new Date().toISOString(),
-      contributors: ['MC'],
+      contributors: this.currentUserId() ? [this.currentUserId()] : [],
       blocks: [],
       ...(md ? { markdownBody: md } : {}),
     };
@@ -913,7 +1114,7 @@ export class StateService {
   }
 
   private persistTree(tree: TreeNode[]) {
-    const pageIds = new Set(Object.keys({ ...this.dataService.pages(), ...this.pages() }));
+    const pageIds = new Set(Object.keys(this.pages()));
     const prepared = prepareNavigationTree(tree, pageIds);
     this.apiService.putTree(prepared, this.currentWorkspaceId()).subscribe({
       error: (err) => console.error('Failed to save sidebar tree:', err),
@@ -935,7 +1136,7 @@ export class StateService {
     this.tree.set(nextTree);
     this.persistTree(nextTree);
 
-    const cur = this.pages()[pageId] ?? this.dataService.pages()[pageId];
+    const cur = this.pages()[pageId];
     if (!cur) return;
 
     const crumb =
@@ -943,9 +1144,6 @@ export class StateService {
     const next: Page = { ...cur, title, breadcrumb: crumb };
 
     this.pages.update((p) => ({ ...p, [pageId]: next }));
-    if (this.dataService.pages()[pageId]) {
-      this.dataService.pages.update((pm) => ({ ...pm, [pageId]: next }));
-    }
 
     this.apiService.updatePage(pageId, { title, breadcrumb: crumb }).subscribe({
       error: (err) => console.error('Failed to rename page:', err),
@@ -959,7 +1157,6 @@ export class StateService {
 
   updateCurrentPageTitle(title: string) {
     const id = this.currentId();
-    if (id === AUTH_RFC_PAGE_ID) return;
     const cur = this.mergeCurrentPage();
     const crumb =
       cur.breadcrumb.length > 0 ? [...cur.breadcrumb.slice(0, -1), title] : [title];
@@ -972,9 +1169,8 @@ export class StateService {
 
   updateCurrentPageBlocks(blocks: Block[]) {
     const id = this.currentId();
-    if (id === AUTH_RFC_PAGE_ID) return;
     const cur = this.mergeCurrentPage();
-    const next = { ...cur, blocks };
+    const next = { ...cur, blocks, version: (cur.version ?? 1) + 1 };
     this.pages.update((p) => ({ ...p, [id]: next }));
     this.apiService.updatePage(id, { blocks }).subscribe({
       error: (err) => console.error('Failed to save blocks:', err),
@@ -984,7 +1180,6 @@ export class StateService {
   /** Persist Markdown document body for the open page (GFM). */
   saveCurrentPageMarkdownBody(raw: string) {
     const id = this.currentId();
-    if (id === AUTH_RFC_PAGE_ID) return;
     const cur = this.mergeCurrentPage();
     const trimmed = raw.trim();
     const next: Page = {
@@ -1001,11 +1196,10 @@ export class StateService {
       });
   }
 
-  /** Resolved page record backing PATCH helpers (API first, then demo catalog). */
   private mergeCurrentPage(): Page {
     const id = this.currentId();
     return (
-      this.pages()[id] ?? this.dataService.pages()[id] ?? {
+      this.pages()[id] ?? {
         id,
         icon: '📄',
         title: 'Untitled',
@@ -1092,7 +1286,7 @@ export class StateService {
     const tempId = this.newCommentId("c");
     const newComment: Comment = {
       id: tempId,
-      author: "MC",
+      author: this.currentUserId(),
       text: trimmed,
       at: "just now",
       resolved: false,
@@ -1114,17 +1308,23 @@ export class StateService {
   }
 
   resolveComment(key: string) {
-    const comments = {...this.comments()};
-    const comment = comments[key]?.[0];
-    if (!comment) return;
-    
-    comments[key] = comments[key].map(c => ({ ...c, resolved: !c.resolved }));
-    this.comments.set(comments);
-    
-    // Update backend
-    this.apiService.updateComment(comment.id, { ...comment, resolved: !comment.resolved }).subscribe({
-      error: (err) => console.error('Failed to update comment:', err)
-    });
+    const isBlock = key.includes('__');
+    const map = isBlock ? { ...this.comments() } : { ...this.pageComments() };
+    const list = map[key];
+    if (!list?.length) return;
+
+    const nextResolved = !list[0].resolved;
+    const updated = list.map((c) => ({ ...c, resolved: nextResolved }));
+    map[key] = updated;
+
+    if (isBlock) this.comments.set(map);
+    else this.pageComments.set(map);
+
+    for (const c of updated) {
+      this.apiService.updateComment(c.id, c).subscribe({
+        error: (err) => console.error('Failed to update comment:', err),
+      });
+    }
   }
 
   replyComment(key: string, text: string, parentCommentId?: string) {
@@ -1140,7 +1340,7 @@ export class StateService {
 
     const reply: Comment = {
       id: this.newCommentId("cr"),
-      author: "MC",
+      author: this.currentUserId(),
       text: trimmed,
       at: "just now",
       resolved: false,
@@ -1162,12 +1362,14 @@ export class StateService {
   }
 
   addReaction(emoji: string) {
+    const uid = this.currentUserId();
+    if (!uid) return;
     const pageId = this.currentId();
     const reactions = {...this.reactions()};
     const cur = reactions[pageId] || {};
     const users = cur[emoji] || [];
-    const has = users.includes("MC");
-    const newUsers = has ? users.filter(u => u !== "MC") : [...users, "MC"];
+    const has = users.includes(uid);
+    const newUsers = has ? users.filter((u) => u !== uid) : [...users, uid];
     const newCur = { ...cur };
     if (newUsers.length === 0) delete newCur[emoji];
     else newCur[emoji] = newUsers;
@@ -1175,13 +1377,13 @@ export class StateService {
     this.reactions.set(reactions);
     
     // Update backend
-    this.apiService.addReaction({ pageId, emoji, userId: "MC" }).subscribe({
+    this.apiService.addReaction({ pageId, emoji, userId: uid }).subscribe({
       error: (err) => console.error('Failed to add reaction:', err)
     });
   }
 
   toggleCommentReaction(commentId: string, emoji: string) {
-    const userId = 'MC';
+    const userId = this.currentUserId();
     const toggleOnMap = (cur?: Record<string, string[]>): Record<string, string[]> => {
       const next = { ...(cur ?? {}) };
       const users = [...(next[emoji] ?? [])];
@@ -1244,7 +1446,7 @@ export class StateService {
     const tempId = this.newCommentId("pc");
     const newComment: Comment = {
       id: tempId,
-      author: "MC",
+      author: this.currentUserId(),
       text: trimmed,
       at: "just now",
       resolved: false,
@@ -1281,7 +1483,7 @@ export class StateService {
 
     const reply: Comment = {
       id: this.newCommentId("pcr"),
-      author: "MC",
+      author: this.currentUserId(),
       text: trimmed,
       at: "just now",
       resolved: false,
@@ -1311,25 +1513,29 @@ export class StateService {
   }
 
   markAllInboxRead() {
+    const uid = this.currentUserId();
+    if (!uid) return;
     this.inbox.update((items) => items.map((i) => ({ ...i, unread: false })));
-    this.apiService.markAllInboxRead().subscribe();
+    this.apiService.markAllInboxRead(uid).subscribe();
   }
 
   setTweak(key: keyof TweakDefaults, value: string) {
     this.tweaks.update((t) => ({ ...t, [key]: value }));
+    const uid = this.currentUserId();
+    if (!uid) return;
+    const tw = this.tweaks();
     this.apiService
-      .putPreferences(this.currentUserId, {
-        theme: this.tweaks().theme,
-        accent: this.tweaks().accent,
+      .putPreferences(uid, {
+        theme: tw.theme,
+        accent: tw.accent,
+        pageWidth: tw.pageWidth,
       })
       .subscribe();
   }
-}
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  storageUsedPercent(): number {
+    const s = this.storage();
+    if (!s?.quotaBytes) return 0;
+    return Math.min(100, Math.round((s.usedBytes / s.quotaBytes) * 100));
+  }
 }

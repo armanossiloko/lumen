@@ -16,8 +16,7 @@ import { CommentReactions } from '../comment-reactions/comment-reactions';
 import { PageCommentComposer } from '../page-comment-composer/page-comment-composer';
 import { IconDisplay } from '../icon-picker/icon-display';
 import { IconPicker } from '../icon-picker/icon-picker';
-import { AUTH_RFC_PAGE_ID } from '../../content/auth-rfc-canonical';
-import { Page, Block, Comment } from '../../models';
+import { Page, Block, Comment, CurrentUser } from '../../models';
 
 @Component({
   selector: 'app-page-view',
@@ -45,6 +44,7 @@ export class PageView implements OnChanges {
   @Input() pageThread: Comment[] = [];
   @Input() pageWidth: string = 'regular';
   @Input() people: any = {};
+  @Input() currentUser: CurrentUser | null = null;
 
   readonly Object = Object;
 
@@ -61,11 +61,13 @@ export class PageView implements OnChanges {
   @Output() onSelectPage = new EventEmitter<string>();
   @Output() onMarkdownBodySave = new EventEmitter<string>();
   @Output() onIconChange = new EventEmitter<string>();
+  @Output() onBlockReorder = new EventEmitter<{ from: number; to: number }>();
 
   showInsertMenu = signal<{ idx: number } | null>(null);
   iconPickerOpen = signal(false);
   reactionPickerOpen = signal(false);
   mdEditing = signal(false);
+  dragBlockIdx = signal<number | null>(null);
 
   reactionPalette = ['👍', '❤️', '🎉', '🚀', '👀', '🌱', '🔥', '💯', '✅', '👋'];
 
@@ -76,12 +78,7 @@ export class PageView implements OnChanges {
   }
 
   usesMarkdownDoc(): boolean {
-    if (this.page?.id === AUTH_RFC_PAGE_ID) return false;
     return !!this.page?.markdownBody?.trim();
-  }
-
-  isAuthRfcPinned(): boolean {
-    return this.page?.id === AUTH_RFC_PAGE_ID;
   }
 
   saveMarkdownEditor(raw: string) {
@@ -173,9 +170,28 @@ export class PageView implements OnChanges {
   }
 
   handleTitleBlur(event: Event) {
-    if (this.page?.id === AUTH_RFC_PAGE_ID) return;
     const target = event.target as HTMLElement;
     this.onTitleChange.emit(target.innerText);
+  }
+
+  handleBlockDragStart(idx: number) {
+    this.dragBlockIdx.set(idx);
+  }
+
+  handleBlockDragOver(event: DragEvent, idx: number) {
+    event.preventDefault();
+  }
+
+  handleBlockDrop(idx: number) {
+    const from = this.dragBlockIdx();
+    if (from != null && from !== idx) {
+      this.onBlockReorder.emit({ from, to: idx });
+    }
+    this.dragBlockIdx.set(null);
+  }
+
+  handleBlockDragEnd() {
+    this.dragBlockIdx.set(null);
   }
 
   handleReactClick(emoji: string) {
@@ -188,7 +204,16 @@ export class PageView implements OnChanges {
   }
 
   isMyReaction(emoji: string): boolean {
-    return this.getReactionUsers(emoji).includes('YOU');
+    const uid = this.currentUser?.userId;
+    return uid ? this.getReactionUsers(emoji).includes(uid) : false;
+  }
+
+  currentUserColor(): string {
+    return this.currentUser?.color ?? 'var(--accent)';
+  }
+
+  currentUserInitial(): string {
+    return this.currentUser?.initial ?? '?';
   }
 
   getPerson(id: string) {

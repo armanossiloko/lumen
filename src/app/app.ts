@@ -21,11 +21,10 @@ import {
 } from './components/overlays/aux-modals.component';
 import { CreateNavigationModal } from './components/overlays/create-navigation-modal';
 import { IconEditModal } from './components/icon-picker/icon-edit-modal';
+import { OfflineScreenComponent } from './components/offline-screen/offline-screen';
 
-import { DataService } from './services/data.service';
 import { StateService } from './services/state.service';
 import { ShareMember } from './services/api.service';
-
 @Component({
   selector: 'app-workspace',
   standalone: true,
@@ -47,6 +46,7 @@ import { ShareMember } from './services/api.service';
     BacklinksModal,
     TrashPanel,
     TemplatesModal,
+    OfflineScreenComponent,
   ],
   templateUrl: './app.html',
   styleUrls: ['./app.css'],
@@ -57,10 +57,7 @@ export class AppComponent {
   shareMembersDraft: { userId: string; permission: string }[] = [];
   shareLinkDraft = false;
 
-  constructor(
-    public dataService: DataService,
-    public state: StateService,
-  ) {
+  constructor(public state: StateService) {
     effect(() => {
       if (this.state.showShare()) {
         const pageId = this.state.currentId();
@@ -85,10 +82,7 @@ export class AppComponent {
   pageReactions = computed(() => this.state.reactions()[this.state.currentId()] || {});
   pageThread = computed(() => this.state.pageComments()[this.state.currentId()] || []);
   allPageIds = computed(() => {
-    const ids = new Set([
-      ...Object.keys(this.state.pages()),
-      ...Object.keys(this.dataService.pages()),
-    ]);
+    const ids = new Set(Object.keys(this.state.pages()));
     const walk = (nodes: { id: string; kind: string; children?: unknown[] }[]) => {
       for (const n of nodes) {
         if (n.kind === 'page') ids.add(n.id);
@@ -99,14 +93,19 @@ export class AppComponent {
     return ids;
   });
   pageThreadComments = computed(() => this.state.blockCommentsForCurrentPage());
-
-  /** Other users on this page right now (from SignalR / backend presence only). */
   viewers = computed(() => this.state.pageViewers());
+  currentUser = computed(() => this.state.currentUser());
+  recentPageList = computed(() =>
+    this.state
+      .recentPages()
+      .map((id) => this.state.pages()[id])
+      .filter((p): p is import('./models').Page => !!p),
+  );
 
   currentWorkspace = computed(() => {
     const wsId = this.state.currentWorkspaceId();
     const list = this.state.workspaces();
-    return list.find((w) => w.id === wsId) ?? list[0] ?? this.dataService.workspaces()[0];
+    return list.find((w) => w.id === wsId) ?? list[0];
   });
 
   blockMap = computed(() => {
@@ -154,6 +153,10 @@ export class AppComponent {
 
   handleWorkspaceChange(apiWsId: string) {
     this.state.switchWorkspace(apiWsId);
+  }
+
+  retryConnection() {
+    this.state.retryBootstrap();
   }
 
   openShare() {

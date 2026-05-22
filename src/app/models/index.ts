@@ -97,4 +97,24 @@ export interface Workspace {
 export interface TweakDefaults {
   theme: 'dark' | 'light';
   accent: string;
+  pageWidth: 'narrow' | 'regular' | 'wide';
+}
+
+export interface StorageInfo {
+  userId?: string;
+  usedBytes: number;
+  quotaBytes: number;
+  usedLabel: string;
+  quotaLabel: string;
+}
+
+export interface CurrentUser {
+  userId: string;
+  name: string;
+  initial: string;
+  color: string;
+}
+
+export interface AuthSession extends CurrentUser {
+  token: string;
 }

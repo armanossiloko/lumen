@@ -22,6 +22,7 @@ export class Block {
   @Output() onChange = new EventEmitter<{idx: number, block: IBlock}>();
   @Output() onAddAfter = new EventEmitter<number>();
   @Output() onDelete = new EventEmitter<number>();
+  @Output() onPageLink = new EventEmitter<string>();
   @Output() onCommentClick = new EventEmitter<number>();
   
   hover = signal(false);
@@ -57,7 +58,7 @@ export class Block {
       if (p.b) html += `<strong>${this.escapeHtml(p.t)}</strong>`;
       else if (p.i) html += `<em>${this.escapeHtml(p.t)}</em>`;
       else if (p.c) html += `<code class="inline-code">${this.escapeHtml(p.t)}</code>`;
-      else if (p.l) html += `<a href="#" class="page-link" onclick="event.preventDefault()">${this.escapeHtml(p.t)}</a>`;
+      else if (p.l) html += `<a href="#" class="page-link" data-page-id="${this.escapeAttr(p.l)}">${this.escapeHtml(p.t)}</a>`;
       else html += `<span>${this.escapeHtml(p.t)}</span>`;
     });
 
@@ -68,6 +69,18 @@ export class Block {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  private escapeAttr(text: string): string {
+    return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
+  handleBodyClick(event: MouseEvent) {
+    const anchor = (event.target as HTMLElement).closest('a.page-link');
+    if (!anchor) return;
+    event.preventDefault();
+    const pageId = anchor.getAttribute('data-page-id');
+    if (pageId && pageId !== '#') this.onPageLink.emit(pageId);
   }
   
   handleTextBlur(event: Event, field: string = 'text') {

@@ -1,13 +1,18 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 import { InboxItem } from '../models';
+import { environment } from '../../environments/environment';
+import { AuthTokenService } from './auth-token.service';
 
-const HUB_URL = 'http://localhost:5013/hubs/lumen';
+const HUB_URL = environment.apiBaseUrl
+  ? `${environment.apiBaseUrl}/hubs/lumen`
+  : '/hubs/lumen';
 /** Keep presence alive while the tab stays on a page (backend TTL is ~2 min). */
 const PRESENCE_HEARTBEAT_MS = 45_000;
 
 @Injectable({ providedIn: 'root' })
 export class RealtimeService {
+  private authToken = inject(AuthTokenService);
   private connection: signalR.HubConnection | null = null;
   /** Prevents parallel connect() from replacing the connection mid-handshake. */
   private connectTask: Promise<void> | null = null;
@@ -26,7 +31,7 @@ export class RealtimeService {
     this.userId = userId;
 
     if (this.connection?.state === signalR.HubConnectionState.Connected) {
-      await this.invoke('SubscribeInbox', userId);
+      await this.invoke('SubscribeInbox');
       return;
     }
 
@@ -46,7 +51,7 @@ export class RealtimeService {
   private async establishConnection(userId: string): Promise<void> {
     if (this.connection?.state === signalR.HubConnectionState.Connecting) {
       await this.waitUntilConnected(this.connection);
-      await this.invoke('SubscribeInbox', userId);
+      await this.invoke('SubscribeInbox');
       return;
     }
 
@@ -60,7 +65,9 @@ export class RealtimeService {
     }
 
     const conn = new signalR.HubConnectionBuilder()
-      .withUrl(`${HUB_URL}?userId=${encodeURIComponent(userId)}`)
+      .withUrl(HUB_URL, {
+        accessTokenFactory: () => this.authToken.get() ?? '',
+      })
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .configureLogging(signalR.LogLevel.Warning)
       .build();
@@ -87,13 +94,13 @@ export class RealtimeService {
       throw new Error(`SignalR expected Connected after start, got ${conn.state}`);
     }
 
-    await this.invoke('SubscribeInbox', userId);
+    await this.invoke('SubscribeInbox');
   }
 
   private async resubscribeAfterReconnect(): Promise<void> {
-    await this.invoke('SubscribeInbox', this.userId);
+    await this.invoke('SubscribeInbox');
     if (this.currentPageId) {
-      await this.invoke('JoinPage', this.currentPageId, this.userId);
+      await this.invoke('JoinPage', this.currentPageId);
     }
   }
 
@@ -115,14 +122,14 @@ export class RealtimeService {
     if (!this.isConnected()) return;
 
     if (this.currentPageId) {
-      await this.invoke('LeavePage', this.currentPageId, this.userId);
+      await this.invoke('LeavePage', this.currentPageId);
     }
 
     this.currentPageId = pageId;
     this.pageViewers.set([]);
 
     if (pageId) {
-      await this.invoke('JoinPage', pageId, this.userId);
+      await this.invoke('JoinPage', pageId);
       this.startPresenceHeartbeat();
     } else {
       this.stopPresenceHeartbeat();
@@ -133,7 +140,7 @@ export class RealtimeService {
     this.stopPresenceHeartbeat();
     this.presenceHeartbeat = setInterval(() => {
       if (!this.currentPageId || !this.isConnected()) return;
-      void this.invoke('TouchPage', this.currentPageId, this.userId);
+      void this.invoke('TouchPage', this.currentPageId);
     }, PRESENCE_HEARTBEAT_MS);
   }
 

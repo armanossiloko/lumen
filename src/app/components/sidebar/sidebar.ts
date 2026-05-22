@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TreeNode as ITreeNode, Workspace } from '../../models';
+import { TreeNode as ITreeNode, Workspace, Page } from '../../models';
 import { findTreeNode, prepareNavigationTree } from '../../navigation/tree-utils';
 import { IconDisplay } from '../icon-picker/icon-display';
 
@@ -43,7 +43,7 @@ import { IconDisplay } from '../icon-picker/icon-display';
             </button>
           }
           <div class="ws-dd-divider"></div>
-          <button class="ws-dd-item ws-dd-item--quiet">
+          <button class="ws-dd-item ws-dd-item--quiet" (click)="promptCreate()">
             <span class="ws-avatar" style="background: transparent; border: 1px dashed var(--border)">+</span>
             <div class="ws-dd-meta"><div class="ws-dd-name">Create workspace</div></div>
           </button>
@@ -57,8 +57,17 @@ export class WorkspaceSwitcher {
   @Input() current!: Workspace;
   @Input() workspaces: Workspace[] = [];
   @Output() onChange = new EventEmitter<string>();
+  @Output() onCreateWorkspace = new EventEmitter<string>();
   
   open = signal(false);
+
+  promptCreate() {
+    const name = window.prompt('Workspace name');
+    if (name?.trim()) {
+      this.onCreateWorkspace.emit(name.trim());
+      this.open.set(false);
+    }
+  }
 }
 
 @Component({
@@ -318,6 +327,10 @@ export class Sidebar implements OnChanges {
   @Input() workspaces: Workspace[] = [];
   @Input() currentWorkspace!: Workspace;
   @Input() expandHintId: string | null = null;
+  @Input() storagePercent = 0;
+  @Input() storageText = '';
+  @Input() favoritePages: Page[] = [];
+  @Input() recentPages: Page[] = [];
 
   readonly Date = Date;
 
@@ -333,6 +346,7 @@ export class Sidebar implements OnChanges {
   @Output() renamePageConfirm = new EventEmitter<{ id: string; title: string }>();
   @Output() treeReorder = new EventEmitter<{ dragId: string; targetId: string }>();
   @Output() workspaceChange = new EventEmitter<string>();
+  @Output() workspaceCreate = new EventEmitter<string>();
   @Output() openTrash = new EventEmitter<void>();
   @Output() changeIcon = new EventEmitter<{
     id: string;

@@ -16,7 +16,7 @@
     }
   </div>
   
-  <div class="blk-body">
+  <div class="blk-body" (click)="handleBodyClick($event)">
     @switch (block.type) {
       @case ('h1') {
         <h1 

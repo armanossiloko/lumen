@@ -2123,18 +2123,286 @@ app-comments-panel {
 @keyframes spin-loading {
   to { transform: rotate(360deg); }
 }
-.loading-screen p,
-.error-screen p {
+.loading-screen p {
   margin-top: 16px;
   font-size: 14px;
   color: var(--fg-muted);
 }
-.error-screen p:first-of-type {
+
+/* API unreachable (full-screen) */
+.error-screen {
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+}
+.error-screen-glow {
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--accent) 22%, transparent) 0%,
+    transparent 68%
+  );
+  pointer-events: none;
+}
+.error-screen-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  padding: 32px 28px 28px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+.error-screen-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--fg-muted);
+}
+.error-screen-mark {
+  color: var(--accent);
+  font-size: 11px;
+}
+.error-screen-name {
   color: var(--fg-strong);
+}
+.error-screen-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+  color: var(--fg-muted);
+}
+.error-screen-title {
+  margin: 0 0 10px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--fg-strong);
+}
+.error-screen-lead {
+  margin: 0 0 22px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--fg-muted);
+}
+.error-screen-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+.error-screen-actions .btn {
+  min-width: 140px;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Sign-in */
+.login-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  padding: 24px;
+  background: var(--doc-bg);
+  color: var(--fg);
+}
+.login-screen-glow {
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--accent) 22%, transparent) 0%,
+    transparent 68%
+  );
+  pointer-events: none;
+}
+.login-screen-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 400px;
+  padding: 32px 28px 24px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+}
+.login-screen-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+.login-screen-mark { color: var(--accent); font-size: 11px; }
+.login-screen-name { color: var(--fg-strong); }
+.login-screen-title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--fg-strong);
+}
+.login-screen-lead {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: var(--fg-muted);
+  line-height: 1.5;
+}
+.login-external {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.login-external-btn {
+  width: 100%;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+}
+.login-external-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: color-mix(in oklch, var(--accent) 35%, var(--border));
+}
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  font-size: 12px;
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.login-divider span { flex-shrink: 0; }
+.login-form { display: flex; flex-direction: column; gap: 14px; }
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+.login-field select,
+.login-field input {
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 14px;
+}
+.login-field select:focus,
+.login-field input:focus {
+  outline: none;
+  border-color: color-mix(in oklch, var(--accent) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 12%, transparent);
+}
+.login-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+.login-error {
+  margin: 0;
+  font-size: 13px;
+  color: #f87171;
+}
+.login-submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+}
+.login-hint {
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: var(--fg-faint);
+  text-align: center;
+}
+.login-hint code {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.hd-sign-out {
+  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 12px;
   font-weight: 500;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.hd-sign-out:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
 }
 
 /* API fallback notice (shown inside main grid) */
+.sb-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-faint);
+  padding: 8px 12px 4px;
+}
+.sb-fav-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.sb-fav-row:hover { background: var(--bg-hover); color: var(--fg); }
+
+.api-banner--fatal { max-width: 420px; text-align: center; }
+
 .api-banner {
   grid-column: 1 / -1;
   padding: 8px 14px;

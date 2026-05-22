@@ -3,32 +3,28 @@
     <!-- Page Header -->
     <div class="page-hd">
       <div class="page-hd-meta">
-        @if (!isAuthRfcPinned()) {
-          <div class="page-hd-icon-wrap">
-            <button
-              type="button"
-              class="page-hd-icon-btn"
-              title="Change page icon"
-              (click)="iconPickerOpen.set(!iconPickerOpen())"
-            >
-              <app-icon-display [icon]="page.icon" [size]="28" klass="page-hd-icon" />
-              @if (!page.icon) {
-                <span class="page-hd-icon-placeholder">+</span>
-              }
-            </button>
-            @if (iconPickerOpen()) {
-              <div class="page-icon-popover" (click)="$event.stopPropagation()">
-                <app-icon-picker
-                  [icon]="page.icon ?? ''"
-                  variant="page"
-                  (iconChange)="onIconChange.emit($event); iconPickerOpen.set(false)"
-                />
-              </div>
+        <div class="page-hd-icon-wrap">
+          <button
+            type="button"
+            class="page-hd-icon-btn"
+            title="Change page icon"
+            (click)="iconPickerOpen.set(!iconPickerOpen())"
+          >
+            <app-icon-display [icon]="page.icon" [size]="28" klass="page-hd-icon" />
+            @if (!page.icon) {
+              <span class="page-hd-icon-placeholder">+</span>
             }
-          </div>
-        } @else {
-          <app-icon-display [icon]="page.icon" [size]="28" klass="page-hd-icon" />
-        }
+          </button>
+          @if (iconPickerOpen()) {
+            <div class="page-icon-popover" (click)="$event.stopPropagation()">
+              <app-icon-picker
+                [icon]="page.icon ?? ''"
+                variant="page"
+                (iconChange)="onIconChange.emit($event); iconPickerOpen.set(false)"
+              />
+            </div>
+          }
+        </div>
         <span class="page-hd-path">{{page.breadcrumb.slice(0, -1).join(' / ')}}</span>
         <span class="page-hd-dot">·</span>
         <span class="page-hd-version">v{{page.version}}</span>
@@ -37,7 +33,7 @@
       </div>
       <h1 
         class="page-hd-title" 
-        [attr.contenteditable]="isAuthRfcPinned() ? false : true"
+        contenteditable="true"
         (blur)="handleTitleBlur($event)"
       >{{page.title}}</h1>
       <div class="page-hd-foot">
@@ -81,25 +77,32 @@
     <!-- Blocks -->
     <div class="blocks">
       @for (block of blocks; track $index; let i = $index) {
-        <app-block
-          [block]="block"
-          [idx]="i"
-          [readOnly]="isAuthRfcPinned()"
-          [isFocused]="focusBlockIdx === i"
-          [commentCount]="getCommentCount(i)"
-          (onFocus)="onFocusBlock.emit($event)"
-          (onChange)="handleBlockChange($event)"
-          (onAddAfter)="handleAddAfter($event)"
-          (onDelete)="handleDeleteBlock($event)"
-          (onCommentClick)="onAddComment.emit($event)"
-        />
+        <div
+          class="blk-wrap"
+          draggable="true"
+          (dragstart)="handleBlockDragStart(i)"
+          (dragover)="handleBlockDragOver($event, i)"
+          (drop)="handleBlockDrop(i)"
+          (dragend)="handleBlockDragEnd()"
+        >
+          <app-block
+            [block]="block"
+            [idx]="i"
+            [isFocused]="focusBlockIdx === i"
+            [commentCount]="getCommentCount(i)"
+            (onFocus)="onFocusBlock.emit($event)"
+            (onChange)="handleBlockChange($event)"
+            (onAddAfter)="handleAddAfter($event)"
+            (onDelete)="handleDeleteBlock($event)"
+            (onCommentClick)="onAddComment.emit($event)"
+            (onPageLink)="onSelectPage.emit($event)"
+          />
+        </div>
       }
-      @if (!isAuthRfcPinned()) {
       <button class="blk-add" (click)="handleAddAfter(blocks.length - 1)">
         <svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
         <span>Add a block</span>
       </button>
-      }
     </div>
     }
 
@@ -173,7 +176,7 @@
                 </div>
               }
               <div class="page-cmt-composer-row">
-                <span class="avatar" [style.width.px]="20" [style.height.px]="20" style="background: #ec4899">M</span>
+                <span class="avatar" [style.width.px]="20" [style.height.px]="20" [style.background]="currentUserColor()">{{ currentUserInitial() }}</span>
                 <app-page-comment-composer
                   placeholder="Reply…"
                   submitLabel="Reply"
@@ -184,7 +187,7 @@
           </div>
         }
         <div class="page-cmt page-cmt--new">
-          <span class="avatar" [style.width.px]="28" [style.height.px]="28" style="background: #ec4899">M</span>
+          <span class="avatar" [style.width.px]="28" [style.height.px]="28" [style.background]="currentUserColor()">{{ currentUserInitial() }}</span>
           <div class="page-cmt-body">
             <app-page-comment-composer
               placeholder="Add a comment…"

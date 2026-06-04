@@ -332,6 +332,9 @@ export class Sidebar implements OnChanges {
   @Input() favoritePages: Page[] = [];
   @Input() recentPages: Page[] = [];
 
+  /** Recent pages list — collapsed by default to save sidebar space. */
+  recentExpanded = signal(false);
+
   readonly Date = Date;
 
   /** Parent nodes of the open page — same trail as breadcrumbs (minus workspace header). */
@@ -455,7 +458,11 @@ export class Sidebar implements OnChanges {
   toggleExpand(id: string) {
     this.expanded.update(e => ({ ...e, [id]: !e[id] }));
   }
-  
+
+  toggleRecent(): void {
+    this.recentExpanded.update((open) => !open);
+  }
+
   handleDrop(targetId: string) {
     if (!this.draggingId || this.draggingId === targetId) {
       this.draggingId = null;

@@ -20,12 +20,34 @@
 
   @if (recentPages.length > 0) {
     <div class="sb-recent">
-      <div class="sb-section-label">Recent</div>
-      @for (p of recentPages; track p.id) {
-        <button type="button" class="sb-fav-row" (click)="onSelect.emit({ id: p.id })">
-          <span>{{ p.icon }}</span>
-          <span>{{ p.title }}</span>
-        </button>
+      <button
+        type="button"
+        class="sb-section-hd sb-recent-hd"
+        (click)="toggleRecent()"
+        [attr.aria-expanded]="recentExpanded()"
+      >
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          aria-hidden="true"
+          [style.transform]="recentExpanded() ? 'rotate(90deg)' : 'rotate(0deg)'"
+          [style.transition]="'transform .12s'"
+        >
+          <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span>Recent</span>
+        @if (!recentExpanded()) {
+          <span class="sb-recent-meta">{{ recentPages.length }}</span>
+        }
+      </button>
+      @if (recentExpanded()) {
+        @for (p of recentPages; track p.id) {
+          <button type="button" class="sb-fav-row" (click)="onSelect.emit({ id: p.id })">
+            <span>{{ p.icon }}</span>
+            <span>{{ p.title }}</span>
+          </button>
+        }
       }
     </div>
   }

@@ -197,6 +197,22 @@ app-header {
 }
 .sb-section-hd:hover { color: var(--fg-muted); }
 .sb-section-hd > span:nth-of-type(1) { flex: 1; }
+button.sb-section-hd {
+  width: calc(100% - 8px);
+  border: none;
+  background: transparent;
+  font: inherit;
+}
+.sb-recent-hd {
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+.sb-recent-meta {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--fg-faint);
+  font-variant-numeric: tabular-nums;
+}
 .sb-section-actions { display: flex; align-items: center; gap: 2px; }
 .sb-section-hd:hover .tree-act { opacity: 1; }
 

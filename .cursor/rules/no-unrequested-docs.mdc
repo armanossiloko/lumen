@@ -1,0 +1,26 @@
+---
+description: Do not create markdown docs unless the user asks
+alwaysApply: true
+---
+
+# Documentation files
+
+Do **not** create or update markdown files to document a feature, setup, or change unless the user **explicitly** asks for documentation.
+
+## Do not create (unless asked)
+
+- New summary/guide files: `DOCKER.md`, `SETUP.md`, `DEPLOY.md`, `ARCHITECTURE.md`, or similar
+- “How to use what I just built” write-ups as new `.md` files
+- Extra README sections added only to describe work you just finished
+
+Put usage notes, run commands, and architecture explanation in the **chat reply** instead.
+
+## Allowed without asking
+
+- Editing code, config, Dockerfiles, `.env.example`, and comments in source when needed for the task
+- Fixing typos or factual errors in an **existing** doc the user is already changing in the same task
+- `.cursor/rules/*.mdc` when the user asks for a Cursor rule
+
+## When the user wants docs
+
+Only then: create or expand markdown (README, `DOCKER.md`, etc.) in the form and scope they request.

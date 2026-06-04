@@ -14,8 +14,8 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var dbPath = Path.Combine(builder.Environment.ContentRootPath, "lumen.db");
-var connectionString = $"Data Source={dbPath}";
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection must be set (PostgreSQL).");
 
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key must be set in appsettings.");
@@ -115,7 +115,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(connectionString));
+    options.UseNpgsql(connectionString));
 
 var app = builder.Build();
 
@@ -129,13 +129,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<LumenHub>("/hubs/lumen").RequireAuthorization();
+app.UseLumenSpa();
 
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    IdentityDatabaseBootstrap.EnsureCompatible(db, dbPath, app.Environment);
     db.Database.EnsureCreated();
-    DatabaseRepair.Apply(db);
     await DataSeeder.InitializeAsync(scope.ServiceProvider);
 }
 

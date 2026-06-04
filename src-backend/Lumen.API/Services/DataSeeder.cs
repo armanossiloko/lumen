@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Lumen.API.Services;
 
 /// <summary>
-/// Seeds SQLite from JSON files in <c>SeedData/</c> (copied next to the built assembly).
+/// Seeds PostgreSQL from JSON files in <c>SeedData/</c> (copied next to the built assembly).
 /// No external tools or npm scripts are required.
 /// </summary>
 public static class DataSeeder

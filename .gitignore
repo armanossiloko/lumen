@@ -32,11 +32,6 @@ TestResults/
 *.nupkg
 *.snupkg
 
-# Local SQLite database (ConnectionStrings:DefaultConnection → lumen.db)
-*.db
-*.db-shm
-*.db-wal
-
 # Local config overrides (optional pattern; keep secrets out of git)
 **/appsettings.*.local.json
 

@@ -1,0 +1,31 @@
+# Git and IDE
+.git
+.gitignore
+.cursor
+.vscode
+.idea
+
+# Angular
+node_modules
+dist
+.angular
+coverage
+
+# .NET
+**/bin
+**/obj
+**/.vs
+*.db
+*.db-shm
+*.db-wal
+
+# Local env and refs
+.env
+.env.*
+!.env.example
+refs
+
+# Docs / misc
+README.md
+*.md
+!src-backend/**/SeedData/**

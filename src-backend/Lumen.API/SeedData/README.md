@@ -15,6 +15,6 @@ Bundled JSON loaded automatically when the API starts (`DataSeeder.Initialize`).
 
 Users and default preferences for `MC` are defined in `Services/DataSeeder.cs` on first database creation.
 
-To reset: delete `lumen.db` and restart the API.
+To reset: drop and recreate the `lumen` database (or `docker compose down -v`), then restart the API.
 
 **Sign-in (local dev):** any seeded user, password `lumen`.

@@ -81,6 +81,7 @@ export class WorkspaceSwitcher {
         [style.paddingLeft.px]="8 + depth * 14"
         [draggable]="node.kind !== 'workspace'"
         (dragstart)="onDragStart.emit(node.id)"
+        (dragend)="onDragEnd.emit()"
         (dragover)="$event.preventDefault(); onDragOver.emit(node.id)"
         (drop)="$event.preventDefault(); $event.stopPropagation(); onDrop.emit(node.id)"
         (mouseenter)="hover.set(true)"
@@ -128,7 +129,7 @@ export class WorkspaceSwitcher {
             (keydown)="onBodyKeydown($event)"
           >
             <app-icon-display [icon]="node.icon" [size]="14" klass="tree-icon" />
-            <span class="tree-label" (dblclick)="beginRename($event)">{{ node.title }}</span>
+            <span class="tree-label" (dblclick)="beginRename($event)">{{ displayTitle }}</span>
           </div>
         }
         @if (hover() && node.kind !== 'workspace' && !renaming()) {
@@ -156,6 +157,7 @@ export class WorkspaceSwitcher {
               [ancestorIds]="ancestorIds"
               [dragOverId]="dragOverId"
               [pageIds]="pageIds"
+              [pageTitles]="pageTitles"
               (onSelect)="onSelect.emit($event)"
               (expandOnly)="expandOnly.emit($event)"
               (toggleExpand)="toggleExpand.emit($event)"
@@ -163,6 +165,7 @@ export class WorkspaceSwitcher {
               (onAddFolderInTree)="onAddFolderInTree.emit($event)"
               (renamePageConfirm)="renamePageConfirm.emit($event)"
               (onDragStart)="onDragStart.emit($event)"
+              (onDragEnd)="onDragEnd.emit()"
               (onDragOver)="onDragOver.emit($event)"
               (onDrop)="onDrop.emit($event)"
               (onChangeIcon)="onChangeIcon.emit($event)"
@@ -184,6 +187,8 @@ export class TreeNode {
   @Input() ancestorIds: ReadonlySet<string> = new Set();
   /** Page ids from the catalog — nodes with a page always open on label click. */
   @Input() pageIds: ReadonlySet<string> = new Set();
+  /** Authoritative page titles from the pages catalog (sidebar labels for pages). */
+  @Input() pageTitles: Record<string, string> = {};
   
   @Output() onSelect = new EventEmitter<string>();
   @Output() expandOnly = new EventEmitter<string>();
@@ -192,6 +197,7 @@ export class TreeNode {
   @Output() onAddFolderInTree = new EventEmitter<{ parentId: string; parentTitle: string }>();
   @Output() renamePageConfirm = new EventEmitter<{ id: string; title: string }>();
   @Output() onDragStart = new EventEmitter<string>();
+  @Output() onDragEnd = new EventEmitter<void>();
   @Output() onDragOver = new EventEmitter<string>();
   @Output() onDrop = new EventEmitter<string>();
   @Output() onChangeIcon = new EventEmitter<{
@@ -209,7 +215,7 @@ export class TreeNode {
     ev.preventDefault();
     ev.stopPropagation();
     if (this.node.kind !== 'page') return;
-    this.renameDraft = this.node.title;
+    this.renameDraft = this.displayTitle;
     this.renaming.set(true);
   }
 
@@ -217,7 +223,7 @@ export class TreeNode {
     if (!this.renaming()) return;
     const t = this.renameDraft.trim();
     this.renaming.set(false);
-    if (!t || t === this.node.title) return;
+    if (!t || t === this.displayTitle) return;
     this.renamePageConfirm.emit({ id: this.node.id, title: t });
   }
 
@@ -238,6 +244,10 @@ export class TreeNode {
     return this.expanded[this.node.id];
   }
   
+  get displayTitle(): string {
+    return this.pageTitles[this.node.id] ?? this.node.title;
+  }
+
   get isCurrent() {
     return this.node.id === this.currentId;
   }
@@ -256,7 +266,7 @@ export class TreeNode {
 
   get chevronLabel(): string {
     const verb = this.isOpen ? 'Collapse' : 'Expand';
-    return `${verb} ${this.node.title}`;
+    return `${verb} ${this.displayTitle}`;
   }
 
   get opensAsPage(): boolean {
@@ -271,12 +281,12 @@ export class TreeNode {
     if (this.opensAsPage) {
       const hint = 'Double-click title to rename.';
       if (this.hasChildren) {
-        return `Open “${this.node.title}”. Use the arrow only to show or hide nested pages. ${hint}`;
+        return `Open “${this.displayTitle}”. Use the arrow only to show or hide nested pages. ${hint}`;
       }
-      return `Open “${this.node.title}”. ${hint}`;
+      return `Open “${this.displayTitle}”. ${hint}`;
     }
     if (this.node.kind === 'folder') {
-      return `“${this.node.title}” is a sidebar section (no page). Click to expand or collapse; use the arrow for the same.`;
+      return `“${this.displayTitle}” is a sidebar section (no page). Click to expand or collapse; use the arrow for the same.`;
     }
     return undefined;
   }
@@ -327,10 +337,9 @@ export class Sidebar implements OnChanges {
   @Input() workspaces: Workspace[] = [];
   @Input() currentWorkspace!: Workspace;
   @Input() expandHintId: string | null = null;
-  @Input() storagePercent = 0;
-  @Input() storageText = '';
   @Input() favoritePages: Page[] = [];
   @Input() recentPages: Page[] = [];
+  @Input() pageTitles: Record<string, string> = {};
 
   /** Recent pages list — collapsed by default to save sidebar space. */
   recentExpanded = signal(false);
@@ -350,7 +359,6 @@ export class Sidebar implements OnChanges {
   @Output() treeReorder = new EventEmitter<{ dragId: string; targetId: string }>();
   @Output() workspaceChange = new EventEmitter<string>();
   @Output() workspaceCreate = new EventEmitter<string>();
-  @Output() openTrash = new EventEmitter<void>();
   @Output() changeIcon = new EventEmitter<{
     id: string;
     kind: 'page' | 'folder';
@@ -465,11 +473,24 @@ export class Sidebar implements OnChanges {
 
   handleDrop(targetId: string) {
     if (!this.draggingId || this.draggingId === targetId) {
-      this.draggingId = null;
-      this.dragOverId = null;
+      this.clearDragState();
       return;
     }
     this.treeReorder.emit({ dragId: this.draggingId, targetId });
+    this.clearDragState();
+  }
+
+  handleDragOver(nodeId: string) {
+    if (this.draggingId && this.draggingId !== nodeId) {
+      this.dragOverId = nodeId;
+    }
+  }
+
+  handleDragEnd() {
+    this.clearDragState();
+  }
+
+  private clearDragState() {
     this.draggingId = null;
     this.dragOverId = null;
   }

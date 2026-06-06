@@ -13,13 +13,10 @@ import { fileToIconDataUrl, normalizeIconInput } from '../../icons/icon-utils';
   template: `
     <div class="icon-picker">
       <div class="icon-picker-preview-row">
-        <button
-          type="button"
+        <div
           class="icon-picker-preview"
-          [class.icon-picker-preview--none]="!value()"
-          [class.icon-picker-preview--active]="mode() === 'none'"
-          (click)="selectNone()"
-          title="No icon"
+          [class.icon-picker-preview--empty]="!value()"
+          aria-hidden="true"
         >
           @if (value() && !isImage(value())) {
             <span class="icon-picker-emoji">{{ value() }}</span>
@@ -28,14 +25,21 @@ import { fileToIconDataUrl, normalizeIconInput } from '../../icons/icon-utils';
           } @else {
             <span class="icon-picker-none">—</span>
           }
-        </button>
-        <div class="icon-picker-preview-label">
-          @if (!value()) {
-            No icon
-          } @else if (isImage(value())) {
-            Custom image
-          } @else {
-            {{ value() }}
+        </div>
+        <div class="icon-picker-preview-meta">
+          <div class="icon-picker-preview-label">
+            @if (!value()) {
+              No icon selected
+            } @else if (isImage(value())) {
+              Custom image
+            } @else {
+              {{ value() }}
+            }
+          </div>
+          @if (value()) {
+            <button type="button" class="icon-picker-remove" (click)="selectNone()">
+              Remove icon
+            </button>
           }
         </div>
       </div>
@@ -51,11 +55,6 @@ import { fileToIconDataUrl, normalizeIconInput } from '../../icons/icon-utils';
           [class.is-active]="mode() === 'upload'"
           (click)="mode.set('upload')"
         >Upload</button>
-        <button
-          type="button"
-          [class.is-active]="mode() === 'none'"
-          (click)="selectNone()"
-        >None</button>
       </div>
 
       @if (mode() === 'preset') {
@@ -100,9 +99,7 @@ import { fileToIconDataUrl, normalizeIconInput } from '../../icons/icon-utils';
 export class IconPicker {
   @Input() set icon(v: string) {
     this.value.set(normalizeIconInput(v));
-    if (!v) this.mode.set('none');
-    else if (this.isImage(v)) this.mode.set('upload');
-    else this.mode.set('preset');
+    this.mode.set(this.isImage(v) ? 'upload' : 'preset');
   }
 
   @Input() variant: 'page' | 'folder' = 'page';
@@ -110,7 +107,7 @@ export class IconPicker {
   @Output() iconChange = new EventEmitter<string>();
 
   value = signal('');
-  mode = signal<'preset' | 'upload' | 'none'>('preset');
+  mode = signal<'preset' | 'upload'>('preset');
   uploading = signal(false);
   uploadError = signal<string | null>(null);
 
@@ -131,7 +128,7 @@ export class IconPicker {
 
   selectNone() {
     this.value.set('');
-    this.mode.set('none');
+    this.mode.set('preset');
     this.uploadError.set(null);
     this.iconChange.emit('');
   }

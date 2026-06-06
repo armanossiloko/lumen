@@ -3,12 +3,12 @@
     <!-- Page Header -->
     <div class="page-hd">
       <div class="page-hd-meta">
-        <div class="page-hd-icon-wrap">
+        <div class="page-hd-icon-wrap" #iconPickerRef>
           <button
             type="button"
             class="page-hd-icon-btn"
             title="Change page icon"
-            (click)="iconPickerOpen.set(!iconPickerOpen())"
+            (click)="iconPickerOpen.set(!iconPickerOpen()); pageActionsOpen.set(false)"
           >
             <app-icon-display [icon]="page.icon" [size]="28" klass="page-hd-icon" />
             @if (!page.icon) {
@@ -31,11 +31,37 @@
         <span class="page-hd-dot">·</span>
         <span>Updated {{page.updatedAt}} by {{page.updatedBy}}</span>
       </div>
-      <h1 
-        class="page-hd-title" 
-        contenteditable="true"
-        (blur)="handleTitleBlur($event)"
-      >{{page.title}}</h1>
+      <div class="page-hd-title-row">
+        <h1 
+          class="page-hd-title" 
+          contenteditable="true"
+          (blur)="handleTitleBlur($event)"
+          (keydown)="handleTitleKeydown($event)"
+          (input)="handleTitleInput($event)"
+        >{{page.title}}</h1>
+        <div class="page-hd-actions" #pageActionsRef>
+          <button
+            type="button"
+            class="page-hd-more-btn"
+            (click)="togglePageActions($event)"
+            [attr.aria-expanded]="pageActionsOpen()"
+            aria-haspopup="menu"
+            title="Page options"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="3.5" cy="8" r="1.2" fill="currentColor"/>
+              <circle cx="8" cy="8" r="1.2" fill="currentColor"/>
+              <circle cx="12.5" cy="8" r="1.2" fill="currentColor"/>
+            </svg>
+          </button>
+          @if (pageActionsOpen()) {
+            <app-page-actions-menu
+              [isFavorite]="isFavorite"
+              (onAction)="handlePageAction($event)"
+            />
+          }
+        </div>
+      </div>
       <div class="page-hd-foot">
         <app-avatar-stack [ids]="page.contributors" [max]="5" [people]="people" />
         <span class="page-hd-contrib">{{page.contributors.length}} contributors</span>

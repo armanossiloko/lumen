@@ -102,6 +102,7 @@
               [depth]="0"
               [currentId]="currentId"
               [pageIds]="pageIds"
+              [pageTitles]="pageTitles"
               [expanded]="expanded()"
               [ancestorIds]="ancestorIds"
               [dragOverId]="dragOverId"
@@ -111,7 +112,8 @@
               (onAddPageInTree)="onOpenCreatePage.emit($event)"
               (onAddFolderInTree)="onOpenCreateFolder.emit($event)"
               (onDragStart)="draggingId = $event"
-              (onDragOver)="dragOverId = $event"
+              (onDragEnd)="handleDragEnd()"
+              (onDragOver)="handleDragOver($event)"
               (onDrop)="handleDrop($event)"
               (renamePageConfirm)="renamePageConfirm.emit($event)"
               (onChangeIcon)="changeIcon.emit($event)"
@@ -125,6 +127,7 @@
           [depth]="0"
           [currentId]="currentId"
           [pageIds]="pageIds"
+          [pageTitles]="pageTitles"
           [expanded]="expanded()"
           [ancestorIds]="ancestorIds"
           [dragOverId]="dragOverId"
@@ -134,7 +137,8 @@
           (onAddPageInTree)="onOpenCreatePage.emit($event)"
           (onAddFolderInTree)="onOpenCreateFolder.emit($event)"
           (onDragStart)="draggingId = $event"
-          (onDragOver)="dragOverId = $event"
+          (onDragEnd)="handleDragEnd()"
+          (onDragOver)="handleDragOver($event)"
           (onDrop)="handleDrop($event)"
           (renamePageConfirm)="renamePageConfirm.emit($event)"
           (onChangeIcon)="changeIcon.emit($event)"
@@ -152,19 +156,6 @@
           <svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5h2l1-1h5v7H3v-6z" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinejoin="round"/></svg>
           <span>New folder</span>
         </button>
-      </div>
-    }
-  </div>
-
-  <div class="sb-foot">
-    <button type="button" class="sb-trash" (click)="openTrash.emit()">
-      <svg width="13" height="13" viewBox="0 0 13 13"><path d="M3 4h7l-.5 7a1 1 0 01-1 1H4.5a1 1 0 01-1-1L3 4zM5 4V2.5a1 1 0 011-1h1a1 1 0 011 1V4M2 4h9" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-      <span>Trash</span>
-    </button>
-    @if (storageText) {
-      <div class="sb-storage">
-        <div class="sb-storage-bar"><div class="sb-storage-fill" [style.width.%]="storagePercent"></div></div>
-        <div class="sb-storage-text">{{ storageText }}</div>
       </div>
     }
   </div>

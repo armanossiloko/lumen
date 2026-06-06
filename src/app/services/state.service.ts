@@ -13,6 +13,7 @@ import {
   removeTreeNodeById,
   removeTreeNode,
   renameTreeNodeTitle,
+  singleLineTitle,
   stripWorkspaceBreadcrumbPrefix,
   uniqueChildId,
   updateTreeNodeIcon,
@@ -20,7 +21,7 @@ import {
 import type { IconEditContext } from '../components/icon-picker/icon-edit-modal';
 import { apiWorkspaceId, treeWorkspaceId } from '../navigation/workspace-utils';
 import { ApiService, ShareMember, ShareSettings, PageTemplate } from './api.service';
-import type { AuthSession, CurrentUser, StorageInfo, Person } from '../models';
+import type { AuthSession, CurrentUser, Person } from '../models';
 import { AuthTokenService } from './auth-token.service';
 import { RealtimeService } from './realtime.service';
 import { buildPrintDocument } from '../print/build-print-document';
@@ -39,7 +40,6 @@ export class StateService {
   currentUser = signal<CurrentUser | null>(null);
   currentUserId = computed(() => this.currentUser()?.userId ?? '');
 
-  storage = signal<StorageInfo | null>(null);
   recentPages = signal<string[]>([]);
 
   // Current state
@@ -65,7 +65,6 @@ export class StateService {
   showCommentsPanel = signal<boolean>(true);
   showCmd = signal<boolean>(false);
   showShare = signal<boolean>(false);
-  showActions = signal<boolean>(false);
   showInbox = signal<boolean>(false);
   inbox = signal<InboxItem[]>([]);
   pages = signal<Record<string, Page>>({});
@@ -284,7 +283,6 @@ export class StateService {
     this.showCmd.set(false);
     this.showShare.set(false);
     this.showInbox.set(false);
-    this.showActions.set(false);
     this.loading.set(false);
     this.error.set(null);
     void this.goToLogin();
@@ -296,84 +294,101 @@ export class StateService {
   }
 
   private loadWorkspaceData(userId: string) {
-    const wsId = this.currentWorkspaceId();
-
-    return Promise.all([
-      this.apiService.getPreferences(userId).toPromise(),
-      this.apiService.getPages(wsId).toPromise(),
-      this.apiService.getComments().toPromise(),
-      this.apiService.getReactions().toPromise(),
-      this.apiService.getInbox(userId).toPromise(),
-      this.apiService.getPeople().toPromise(),
-      this.apiService.getWorkspaces().toPromise(),
-      this.apiService.getTree(wsId).toPromise(),
-      this.apiService.getFavorites(userId).toPromise(),
-      this.apiService.getTemplates().toPromise(),
-      this.apiService.getStorage(userId).toPromise(),
-    ]).then(([prefs, pages, comments, reactions, inbox, people, workspaces, tree, favs, templates, storage]) => {
-      if (prefs?.currentWorkspaceId) this.currentWorkspaceId.set(prefs.currentWorkspaceId);
-      if (prefs?.theme) this.tweaks.update((t) => ({ ...t, theme: prefs.theme as TweakDefaults['theme'] }));
-      if (prefs?.accent) this.tweaks.update((t) => ({ ...t, accent: prefs.accent }));
-      if (prefs?.pageWidth) {
-        this.tweaks.update((t) => ({
-          ...t,
-          pageWidth: prefs.pageWidth as TweakDefaults['pageWidth'],
-        }));
-      }
-      if (prefs?.recentPages?.length) this.recentPages.set(prefs.recentPages);
-      if (favs) this.favorites.set(new Set(favs));
-      if (storage) this.storage.set(storage);
-      if (templates) this.templates.set(templates);
-      if (pages) {
-        const fromApi = Object.fromEntries(
-          Object.entries(pages as Record<string, unknown>).map(([id, p]) => [
-            id,
-            this.normalizeRemotePage(p as Record<string, unknown>, id),
-          ]),
-        );
-        this.pages.set(fromApi);
-      }
-      if (comments) {
-        // Separate block comments from page comments
-        const blockComments: { [key: string]: Comment[] } = {};
-        const pageComments: { [key: string]: Comment[] } = {};
-        
-        Object.entries(comments).forEach(([key, commentList]) => {
-          const normalized = this.normalizeCommentList(commentList as unknown[]);
-          if (key.includes('__')) {
-            blockComments[key] = this.normalizeBlockThread(normalized);
-          } else {
-            pageComments[key] = normalized;
-          }
-        });
-        
-        this.comments.set(blockComments);
-        this.pageComments.set(pageComments);
-      }
-      if (reactions) this.reactions.set(reactions);
-      if (inbox) this.inbox.set(inbox);
-      if (people) this.people.set(people);
-      if (workspaces) this.workspaces.set(workspaces);
-      if (tree) {
-        const pageIds = new Set(Object.keys(this.pages()));
-        const prepared = prepareNavigationTree(tree as TreeNode[], pageIds);
-        this.tree.set(prepared);
-        if (JSON.stringify(prepared) !== JSON.stringify(tree)) {
-          this.apiService.putTree(prepared, this.currentWorkspaceId()).subscribe({
-            error: (err) => console.error('Failed to repair navigation tree:', err),
-          });
+    return this.apiService
+      .getPreferences(userId)
+      .toPromise()
+      .then((prefs) => {
+        const wsId = prefs?.currentWorkspaceId ?? this.currentWorkspaceId();
+        this.currentWorkspaceId.set(wsId);
+        if (prefs?.theme) this.tweaks.update((t) => ({ ...t, theme: prefs.theme as TweakDefaults['theme'] }));
+        if (prefs?.accent) this.tweaks.update((t) => ({ ...t, accent: prefs.accent }));
+        if (prefs?.pageWidth) {
+          this.tweaks.update((t) => ({
+            ...t,
+            pageWidth: prefs.pageWidth as TweakDefaults['pageWidth'],
+          }));
         }
-      }
-      const routeId = this.pageIdFromRoute();
-      if (routeId) {
-        this.currentId.set(routeId);
-      } else if (prefs?.recentPages?.[0]) {
-        this.currentId.set(prefs.recentPages[0]);
-      } else if (Object.keys(this.pages()).length) {
-        this.currentId.set(Object.keys(this.pages())[0]);
-      }
-      this.loading.set(false);
-    });
+        if (prefs?.recentPages?.length) this.recentPages.set(prefs.recentPages);
+
+        return Promise.all([
+          this.apiService.getPages(wsId).toPromise(),
+          this.apiService.getComments().toPromise(),
+          this.apiService.getReactions().toPromise(),
+          this.apiService.getInbox(userId).toPromise(),
+          this.apiService.getPeople().toPromise(),
+          this.apiService.getWorkspaces().toPromise(),
+          this.apiService.getTree(wsId).toPromise(),
+          this.apiService.getFavorites(userId).toPromise(),
+          this.apiService.getTemplates().toPromise(),
+        ]).then(([pages, comments, reactions, inbox, people, workspaces, tree, favs, templates]) => {
+          return { prefs, pages, comments, reactions, inbox, people, workspaces, tree, favs, templates };
+        });
+      })
+      .then((result) => {
+        if (!result) return;
+        const { prefs, pages, comments, reactions, inbox, people, workspaces, tree, favs, templates } =
+          result;
+        if (favs) this.favorites.set(new Set(favs));
+        if (templates) this.templates.set(templates);
+        if (pages) {
+          const fromApi = Object.fromEntries(
+            Object.entries(pages as Record<string, unknown>).map(([id, p]) => [
+              id,
+              this.normalizeRemotePage(p as Record<string, unknown>, id),
+            ]),
+          );
+          this.pages.set(fromApi);
+        }
+        if (comments) {
+          // Separate block comments from page comments
+          const blockComments: { [key: string]: Comment[] } = {};
+          const pageComments: { [key: string]: Comment[] } = {};
+
+          Object.entries(comments).forEach(([key, commentList]) => {
+            const normalized = this.normalizeCommentList(commentList as unknown[]);
+            if (key.includes('__')) {
+              blockComments[key] = this.normalizeBlockThread(normalized);
+            } else {
+              pageComments[key] = normalized;
+            }
+          });
+
+          this.comments.set(blockComments);
+          this.pageComments.set(pageComments);
+        }
+        if (reactions) this.reactions.set(reactions);
+        if (inbox) this.inbox.set(inbox);
+        if (people) this.people.set(people);
+        if (workspaces) this.workspaces.set(workspaces);
+        if (tree) {
+          const pageIds = new Set(Object.keys(this.pages()));
+          const prepared = prepareNavigationTree(tree as TreeNode[], pageIds);
+          this.tree.set(prepared);
+          if (JSON.stringify(prepared) !== JSON.stringify(tree)) {
+            this.apiService.putTree(prepared, this.currentWorkspaceId()).subscribe({
+              error: (err) => console.error('Failed to repair navigation tree:', err),
+            });
+          }
+        }
+        const routeId = this.pageIdFromRoute();
+        const loadedPages = this.pages();
+        let targetId = routeId && loadedPages[routeId] ? routeId : null;
+        if (!targetId) {
+          targetId = prefs?.recentPages?.find((id) => loadedPages[id]) ?? null;
+        }
+        if (!targetId) {
+          const keys = Object.keys(loadedPages);
+          if (keys.length) targetId = keys[0];
+        }
+        if (targetId) {
+          if (targetId !== routeId) {
+            this.selectPage(targetId, { skipHistory: true });
+          } else {
+            this.currentId.set(targetId);
+          }
+        }
+        this.loading.set(false);
+      });
   }
 
   private normalizeCommentList(list: unknown[]): Comment[] {
@@ -877,6 +892,9 @@ export class StateService {
       case 'backlinks':
         this.loadBacklinks(pageId);
         break;
+      case 'viewTrash':
+        this.loadTrash();
+        break;
       case 'delete':
         this.deletePageToTrash(pageId);
         break;
@@ -885,7 +903,6 @@ export class StateService {
         this.showCmd.set(true);
         break;
     }
-    this.showActions.set(false);
   }
 
   movePageToParent(pageId: string, newParentId: string) {
@@ -1116,38 +1133,41 @@ export class StateService {
   private persistTree(tree: TreeNode[]) {
     const pageIds = new Set(Object.keys(this.pages()));
     const prepared = prepareNavigationTree(tree, pageIds);
+    this.tree.set(prepared);
     this.apiService.putTree(prepared, this.currentWorkspaceId()).subscribe({
       error: (err) => console.error('Failed to save sidebar tree:', err),
     });
   }
 
-  /** Sidebar rename: updates navigation tree + page title/breadcrumb when the page exists in `pages`. */
-  renamePageFromSidebar(ev: { id: string; title: string }) {
-    const title = ev.title.trim();
-    const pageId = ev.id;
+  /** Keep page record, breadcrumb, sidebar tree, and API in sync for a title change. */
+  private applyPageTitleChange(pageId: string, rawTitle: string) {
+    const title = singleLineTitle(rawTitle);
     if (!title || !pageId) return;
 
-    const tree = [...this.tree()];
-    const path = findNodePath(tree, pageId);
-    const node = path?.[path.length - 1];
-    if (!node || node.kind !== 'page') return;
-
-    const nextTree = renameTreeNodeTitle(tree, pageId, title);
-    this.tree.set(nextTree);
-    this.persistTree(nextTree);
-
-    const cur = this.pages()[pageId];
-    if (!cur) return;
-
+    const existing = this.pages()[pageId] ?? this.mergeCurrentPage();
     const crumb =
-      cur.breadcrumb.length > 0 ? [...cur.breadcrumb.slice(0, -1), title] : [title];
-    const next: Page = { ...cur, title, breadcrumb: crumb };
+      existing.breadcrumb.length > 0
+        ? [...existing.breadcrumb.slice(0, -1), title]
+        : [title];
+    const next: Page = { ...existing, title, breadcrumb: crumb };
 
     this.pages.update((p) => ({ ...p, [pageId]: next }));
 
+    const nextTree = renameTreeNodeTitle([...this.tree()], pageId, title);
+    this.persistTree(nextTree);
+
     this.apiService.updatePage(pageId, { title, breadcrumb: crumb }).subscribe({
-      error: (err) => console.error('Failed to rename page:', err),
+      error: (err) => console.error('Failed to save title:', err),
     });
+  }
+
+  /** Sidebar rename: updates navigation tree + page title/breadcrumb when the page exists in `pages`. */
+  renamePageFromSidebar(ev: { id: string; title: string }) {
+    const pageId = ev.id;
+    const path = findNodePath([...this.tree()], pageId);
+    const node = path?.[path.length - 1];
+    if (!node || (node.kind !== 'page' && !this.pages()[pageId])) return;
+    this.applyPageTitleChange(pageId, ev.title);
   }
 
   private flashExpand(parentId: string) {
@@ -1156,15 +1176,7 @@ export class StateService {
   }
 
   updateCurrentPageTitle(title: string) {
-    const id = this.currentId();
-    const cur = this.mergeCurrentPage();
-    const crumb =
-      cur.breadcrumb.length > 0 ? [...cur.breadcrumb.slice(0, -1), title] : [title];
-    const next = { ...cur, title, breadcrumb: crumb };
-    this.pages.update((p) => ({ ...p, [id]: next }));
-    this.apiService.updatePage(id, { title, breadcrumb: crumb }).subscribe({
-      error: (err) => console.error('Failed to save title:', err),
-    });
+    this.applyPageTitleChange(this.currentId(), title);
   }
 
   updateCurrentPageBlocks(blocks: Block[]) {
@@ -1531,11 +1543,5 @@ export class StateService {
         pageWidth: tw.pageWidth,
       })
       .subscribe();
-  }
-
-  storageUsedPercent(): number {
-    const s = this.storage();
-    if (!s?.quotaBytes) return 0;
-    return Math.min(100, Math.round((s.usedBytes / s.quotaBytes) * 100));
   }
 }

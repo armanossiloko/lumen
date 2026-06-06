@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Page, CurrentUser } from '../../models';
 
@@ -87,13 +87,40 @@ export class Header {
   @Input() canGoForward: boolean = false;
   @Input() currentUser: CurrentUser | null = null;
 
+  @ViewChild('profileRef') profileRef?: ElementRef<HTMLElement>;
+
+  profileOpen = signal(false);
+
   @Output() selectPage = new EventEmitter<string>();
   @Output() themeChange = new EventEmitter<string>();
   @Output() openSearch = new EventEmitter<void>();
   @Output() share = new EventEmitter<void>();
-  @Output() openActions = new EventEmitter<void>();
   @Output() openInbox = new EventEmitter<void>();
   @Output() signOut = new EventEmitter<void>();
   @Output() goBack = new EventEmitter<void>();
   @Output() goForward = new EventEmitter<void>();
+
+  toggleProfile(event: Event) {
+    event.stopPropagation();
+    this.profileOpen.update((open) => !open);
+  }
+
+  onSignOut() {
+    this.profileOpen.set(false);
+    this.signOut.emit();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    if (!this.profileOpen()) return;
+    const el = this.profileRef?.nativeElement;
+    if (el && !el.contains(event.target as Node)) {
+      this.profileOpen.set(false);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    this.profileOpen.set(false);
+  }
 }

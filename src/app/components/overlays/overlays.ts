@@ -313,31 +313,26 @@ export { ShareModal } from './share-modal.component';
   standalone: true,
   imports: [CommonModule],
   template: `
-    @if (open) {
-      <div class="actions-overlay" (click)="onClose.emit()">
-        <div class="actions-menu" (click)="$event.stopPropagation()">
-          <div class="actions-section">Page</div>
-          <button class="actions-item" (click)="onAction.emit('favorite')"><span>⭐</span> {{ isFavorite ? 'Remove from favorites' : 'Add to favorites' }}</button>
-          <button class="actions-item" (click)="onAction.emit('duplicate')"><span>⎘</span> Duplicate</button>
-          <button class="actions-item" (click)="onAction.emit('move')"><span>↗</span> Move to…</button>
-          <button class="actions-item" (click)="onAction.emit('export')"><span>↓</span> Export as PDF</button>
-          <div class="actions-divider"></div>
-          <div class="actions-section">View</div>
-          <button class="actions-item" (click)="onAction.emit('history')"><span>⟲</span> Page history</button>
-          <button class="actions-item" (click)="onAction.emit('backlinks')"><span>↺</span> Backlinks</button>
-          <div class="actions-divider"></div>
-          <button class="actions-item actions-item--danger" (click)="onAction.emit('delete')"><span>🗑</span> Move to trash</button>
-        </div>
-      </div>
-    }
+    <div class="actions-menu" role="menu" (click)="$event.stopPropagation()">
+      <div class="actions-section">Page</div>
+      <button type="button" class="actions-item" role="menuitem" (click)="onAction.emit('favorite')"><span>⭐</span> {{ isFavorite ? 'Remove from favorites' : 'Add to favorites' }}</button>
+      <button type="button" class="actions-item" role="menuitem" (click)="onAction.emit('duplicate')"><span>⎘</span> Duplicate</button>
+      <button type="button" class="actions-item" role="menuitem" (click)="onAction.emit('move')"><span>↗</span> Move to…</button>
+      <button type="button" class="actions-item" role="menuitem" (click)="onAction.emit('export')"><span>↓</span> Export as PDF</button>
+      <div class="actions-divider"></div>
+      <div class="actions-section">View</div>
+      <button type="button" class="actions-item" role="menuitem" (click)="onAction.emit('history')"><span>⟲</span> Page history</button>
+      <button type="button" class="actions-item" role="menuitem" (click)="onAction.emit('backlinks')"><span>↺</span> Backlinks</button>
+      <button type="button" class="actions-item" role="menuitem" (click)="onAction.emit('viewTrash')"><span>🗑</span> View trash</button>
+      <div class="actions-divider"></div>
+      <button type="button" class="actions-item actions-item--danger" role="menuitem" (click)="onAction.emit('delete')"><span>🗑</span> Move to trash</button>
+    </div>
   `,
   styles: []
 })
 export class PageActionsMenu {
-  @Input() open = false;
   @Input() isFavorite = false;
 
-  @Output() onClose = new EventEmitter<void>();
   @Output() onAction = new EventEmitter<string>();
 }
 

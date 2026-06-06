@@ -58,9 +58,14 @@
     </button>
     <button class="hd-icon-btn" (click)="themeChange.emit(theme === 'dark' ? 'light' : 'dark')" title="Toggle theme">
       @if (theme === 'dark') {
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8.5A4.5 4.5 0 015.5 3a.5.5 0 00-.7-.5 5.5 5.5 0 105.7 6.7.5.5 0 00-.5-.7z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
       } @else {
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.2"/><path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.5 2.5l1 1M10.5 10.5l1 1M11.5 2.5l-1 1M3.5 10.5l-1 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
       }
     </button>
     <button class="hd-icon-btn hd-bell" (click)="openInbox.emit()" title="Inbox">
@@ -69,12 +74,34 @@
         <span class="hd-bell-dot"></span>
       }
     </button>
-    <button class="hd-icon-btn" (click)="openActions.emit()" title="Page actions">
-      <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="3" cy="7" r="1.1" fill="currentColor"/><circle cx="7" cy="7" r="1.1" fill="currentColor"/><circle cx="11" cy="7" r="1.1" fill="currentColor"/></svg>
-    </button>
     @if (currentUser) {
-      <button type="button" class="hd-sign-out" (click)="signOut.emit()" title="Sign out">Sign out</button>
-      <app-avatar [initial]="currentUser.initial" [color]="currentUser.color" [size]="26" [title]="currentUser.name" />
+      <div class="hd-profile" #profileRef>
+        <button
+          type="button"
+          class="hd-profile-btn"
+          (click)="toggleProfile($event)"
+          [attr.aria-expanded]="profileOpen()"
+          aria-haspopup="menu"
+          [attr.aria-label]="'Account menu for ' + currentUser.name"
+        >
+          <app-avatar [initial]="currentUser.initial" [color]="currentUser.color" [size]="26" [title]="currentUser.name" />
+        </button>
+        @if (profileOpen()) {
+          <div class="hd-profile-menu" role="menu" (click)="$event.stopPropagation()">
+            <div class="hd-profile-user">
+              <app-avatar [initial]="currentUser.initial" [color]="currentUser.color" [size]="32" />
+              <div class="hd-profile-meta">
+                <div class="hd-profile-name">{{ currentUser.name }}</div>
+                <div class="hd-profile-id">{{ currentUser.userId }}</div>
+              </div>
+            </div>
+            <div class="hd-profile-divider"></div>
+            <button type="button" class="hd-profile-action" role="menuitem" (click)="onSignOut()">
+              Sign out
+            </button>
+          </div>
+        }
+      </div>
     }
   </div>
 </header>

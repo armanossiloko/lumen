@@ -150,6 +150,11 @@ export function insertTreeChild(nodes: TreeNode[], parentId: string, child: Tree
   });
 }
 
+/** Collapse line breaks and repeated spaces — page titles are single-line only. */
+export function singleLineTitle(raw: string): string {
+  return raw.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 /** Update display title for a tree node by id (matches exactly one node). */
 export function renameTreeNodeTitle(nodes: TreeNode[], id: string, title: string): TreeNode[] {
   return nodes.map((n) => {
@@ -206,7 +211,7 @@ export function removeTreeNode(
   return { tree: walk(nodes), removed };
 }
 
-/** Move `dragId` onto `targetId` (as child if folder/workspace, else after as sibling). */
+/** Move `dragId` onto `targetId` (as child if folder/workspace, else before as sibling). */
 export function moveTreeNode(nodes: TreeNode[], dragId: string, targetId: string): TreeNode[] {
   const { tree: without, removed } = removeTreeNode(nodes, dragId);
   if (!removed) return nodes;
@@ -218,14 +223,15 @@ export function moveTreeNode(nodes: TreeNode[], dragId: string, targetId: string
     return insertTreeChild(without, targetId, removed);
   }
 
-  const insertAfter = (list: TreeNode[]): TreeNode[] => {
+  const insertBefore = (list: TreeNode[]): TreeNode[] => {
     const out: TreeNode[] = [];
     for (const n of list) {
-      out.push(n);
       if (n.id === targetId) {
         out.push(removed);
-      } else if (n.children?.length) {
-        const kids = insertAfter(n.children);
+      }
+      out.push(n);
+      if (n.id !== targetId && n.children?.length) {
+        const kids = insertBefore(n.children);
         if (kids !== n.children) {
           out[out.length - 1] = { ...n, children: kids };
         }
@@ -234,7 +240,7 @@ export function moveTreeNode(nodes: TreeNode[], dragId: string, targetId: string
     return out;
   };
 
-  return insertAfter(without);
+  return insertBefore(without);
 }
 
 export function removeTreeNodeById(nodes: TreeNode[], id: string): TreeNode[] {

@@ -10,13 +10,12 @@
     <app-sidebar
       [tree]="state.tree()"
       [pageIds]="allPageIds()"
+      [pageTitles]="pageTitleById()"
       [currentId]="state.currentId()"
       [unreadCount]="state.unreadCount()"
       [workspaces]="state.workspaces()"
       [currentWorkspace]="currentWorkspace()"
       [expandHintId]="state.sidebarExpandHint()"
-      [storagePercent]="state.storageUsedPercent()"
-      [storageText]="state.storage() ? (state.storage()!.usedLabel + ' of ' + state.storage()!.quotaLabel + ' used') : ''"
       [favoritePages]="state.favoritePages()"
       [recentPages]="recentPageList()"
       (onSelect)="handleSelectPage($event)"
@@ -29,7 +28,6 @@
       (renamePageConfirm)="state.renamePageFromSidebar($event)"
       (workspaceChange)="handleWorkspaceChange($event)"
       (workspaceCreate)="state.createWorkspace($event)"
-      (openTrash)="state.loadTrash()"
       (changeIcon)="state.openIconEdit($event)"
     />
 
@@ -50,7 +48,6 @@
         (themeChange)="state.setTweak('theme', $event)"
         (openSearch)="state.showCmd.set(true)"
         (share)="openShare()"
-        (openActions)="state.showActions.set(true)"
         (openInbox)="state.showInbox.set(true)"
         (signOut)="state.logout()"
       />
@@ -66,6 +63,7 @@
           [pageWidth]="state.tweaks().pageWidth"
           [people]="state.people()"
           [currentUser]="currentUser()"
+          [isFavorite]="state.isFavorite(state.currentId())"
           (onTitleChange)="handleTitleChange($event)"
           (onBlocksChange)="handleBlocksChange($event)"
           (onMarkdownBodySave)="state.saveCurrentPageMarkdownBody($event)"
@@ -80,6 +78,7 @@
           (onSelectPage)="state.selectPage($event)"
           (onIconChange)="state.updateCurrentPageIcon($event)"
           (onBlockReorder)="state.reorderCurrentPageBlocks($event.from, $event.to)"
+          (onPageAction)="state.handlePageAction($event)"
         />
 
         <app-comments-panel
@@ -140,13 +139,6 @@
       (copyLink)="copyShareLink()"
       (save)="saveShare()"
       (onClose)="state.showShare.set(false)"
-    />
-
-    <app-page-actions-menu
-      [open]="state.showActions()"
-      [isFavorite]="state.isFavorite(state.currentId())"
-      (onClose)="state.showActions.set(false)"
-      (onAction)="state.handlePageAction($event)"
     />
 
     <app-inbox-panel

@@ -6,6 +6,9 @@ import {
   signal,
   OnChanges,
   SimpleChanges,
+  ViewChild,
+  ElementRef,
+  HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Block as BlockComponent } from '../blocks/block';
@@ -16,7 +19,9 @@ import { CommentReactions } from '../comment-reactions/comment-reactions';
 import { PageCommentComposer } from '../page-comment-composer/page-comment-composer';
 import { IconDisplay } from '../icon-picker/icon-display';
 import { IconPicker } from '../icon-picker/icon-picker';
+import { PageActionsMenu } from '../overlays/overlays';
 import { Page, Block, Comment, CurrentUser } from '../../models';
+import { singleLineTitle } from '../../navigation/tree-utils';
 
 @Component({
   selector: 'app-page-view',
@@ -31,6 +36,7 @@ import { Page, Block, Comment, CurrentUser } from '../../models';
     PageCommentComposer,
     IconDisplay,
     IconPicker,
+    PageActionsMenu,
   ],
   templateUrl: './page-view.html',
   styles: [],
@@ -45,8 +51,12 @@ export class PageView implements OnChanges {
   @Input() pageWidth: string = 'regular';
   @Input() people: any = {};
   @Input() currentUser: CurrentUser | null = null;
+  @Input() isFavorite = false;
 
   readonly Object = Object;
+
+  @ViewChild('pageActionsRef') pageActionsRef?: ElementRef<HTMLElement>;
+  @ViewChild('iconPickerRef') iconPickerRef?: ElementRef<HTMLElement>;
 
   @Output() onTitleChange = new EventEmitter<string>();
   @Output() onBlocksChange = new EventEmitter<Block[]>();
@@ -62,9 +72,11 @@ export class PageView implements OnChanges {
   @Output() onMarkdownBodySave = new EventEmitter<string>();
   @Output() onIconChange = new EventEmitter<string>();
   @Output() onBlockReorder = new EventEmitter<{ from: number; to: number }>();
+  @Output() onPageAction = new EventEmitter<string>();
 
   showInsertMenu = signal<{ idx: number } | null>(null);
   iconPickerOpen = signal(false);
+  pageActionsOpen = signal(false);
   reactionPickerOpen = signal(false);
   mdEditing = signal(false);
   dragBlockIdx = signal<number | null>(null);
@@ -74,6 +86,8 @@ export class PageView implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['page']) {
       this.mdEditing.set(false);
+      this.pageActionsOpen.set(false);
+      this.iconPickerOpen.set(false);
     }
   }
 
@@ -171,7 +185,37 @@ export class PageView implements OnChanges {
 
   handleTitleBlur(event: Event) {
     const target = event.target as HTMLElement;
-    this.onTitleChange.emit(target.innerText);
+    const title = singleLineTitle(target.innerText);
+    if (target.innerText !== title) {
+      target.innerText = title;
+    }
+    if (title && title !== this.page.title) {
+      this.onTitleChange.emit(title);
+    }
+  }
+
+  handleTitleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      (event.target as HTMLElement).blur();
+    }
+  }
+
+  handleTitleInput(event: Event) {
+    const target = event.target as HTMLElement;
+    if (!/[\r\n]/.test(target.innerText)) return;
+    const title = singleLineTitle(target.innerText);
+    target.innerText = title;
+    this.placeCaretAtEnd(target);
+  }
+
+  private placeCaretAtEnd(el: HTMLElement) {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
   }
 
   handleBlockDragStart(idx: number) {
@@ -218,5 +262,39 @@ export class PageView implements OnChanges {
 
   getPerson(id: string) {
     return this.people[id] || { name: id, color: '#888' };
+  }
+
+  togglePageActions(event: Event) {
+    event.stopPropagation();
+    this.iconPickerOpen.set(false);
+    this.pageActionsOpen.update((open) => !open);
+  }
+
+  handlePageAction(action: string) {
+    this.pageActionsOpen.set(false);
+    this.onPageAction.emit(action);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as Node;
+    if (this.pageActionsOpen()) {
+      const el = this.pageActionsRef?.nativeElement;
+      if (el && !el.contains(target)) {
+        this.pageActionsOpen.set(false);
+      }
+    }
+    if (this.iconPickerOpen()) {
+      const el = this.iconPickerRef?.nativeElement;
+      if (el && !el.contains(target)) {
+        this.iconPickerOpen.set(false);
+      }
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    this.pageActionsOpen.set(false);
+    this.iconPickerOpen.set(false);
   }
 }

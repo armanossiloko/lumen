@@ -8,7 +8,6 @@ import { PageView } from './components/page-view/page-view';
 import {
   CommandPalette,
   CommentsPanel,
-  PageActionsMenu,
   InboxPanel,
   BlockCommentModal,
 } from './components/overlays/overlays';
@@ -37,7 +36,6 @@ import { ShareMember } from './services/api.service';
     CommandPalette,
     CommentsPanel,
     ShareModal,
-    PageActionsMenu,
     InboxPanel,
     BlockCommentModal,
     CreateNavigationModal,
@@ -91,6 +89,14 @@ export class AppComponent {
     };
     walk(this.state.tree());
     return ids;
+  });
+  pageTitleById = computed(() => {
+    const pages = this.state.pages();
+    const out: Record<string, string> = {};
+    for (const [id, page] of Object.entries(pages)) {
+      out[id] = page.title;
+    }
+    return out;
   });
   pageThreadComments = computed(() => this.state.blockCommentsForCurrentPage());
   viewers = computed(() => this.state.pageViewers());

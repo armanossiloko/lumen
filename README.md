@@ -17,7 +17,7 @@ Lumen is a documentation and wiki platform built with **Angular 21** and **ASP.N
 No strings attached: no premium tiers, no hidden features. Just a clean, functional docs platform.
 
 <strong>Want to get started?</strong><br/>
-Run with Docker: `docker compose up -d` — the frontend is served at `http://localhost:6000`.
+Run with Docker: `docker compose up -d` — the frontend is served at `http://localhost:8000`.
 
 <strong>Something not working?</strong><br/>
 Open an [issue](https://github.com/nebulora/lumen/issues) on GitHub.
@@ -57,11 +57,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 ```bash
 # Frontend
 npm install
-npm start           # :6000
+npm start           # :8000
 
 # Backend
 cd src-backend/Lumen.API
-dotnet run          # :6002
+dotnet run          # :8002
 
 # Or full stack with Docker
 docker compose up -d

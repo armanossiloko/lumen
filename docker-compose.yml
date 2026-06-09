@@ -24,12 +24,12 @@ services:
         Host=postgres;Port=5432;Database=${POSTGRES_DB:-lumen};
         Username=${POSTGRES_USER:-lumen};Password=${POSTGRES_PASSWORD:-lumen}
       Jwt__Key: ${JWT_KEY:-lumen-docker-signing-key-change-me-32b}
-      Authentication__FrontendCallbackUrl: ${FRONTEND_URL:-http://localhost:6000}/auth/callback
+      Authentication__FrontendCallbackUrl: ${FRONTEND_URL:-http://localhost:8000}/auth/callback
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - '${BACKEND_PORT:-6002}:8080'
+      - '${BACKEND_PORT:-8002}:8080'
 
   frontend:
     build:
@@ -38,7 +38,7 @@ services:
     depends_on:
       - backend
     ports:
-      - '${FRONTEND_PORT:-6000}:80'
+      - '${FRONTEND_PORT:-8000}:80'
 
 volumes:
   lumen_pg_data:

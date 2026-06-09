@@ -92,7 +92,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> ExternalCallback([FromQuery] string? returnUrl)
     {
         var frontend = _configuration["Authentication:FrontendCallbackUrl"]
-            ?? "http://localhost:6000/auth/callback";
+            ?? "http://localhost:8000/auth/callback";
 
         var result = await HttpContext.AuthenticateAsync(AuthSchemes.ExternalCookie);
         if (!result.Succeeded)

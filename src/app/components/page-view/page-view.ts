@@ -57,6 +57,7 @@ export class PageView implements OnChanges {
 
   @ViewChild('pageActionsRef') pageActionsRef?: ElementRef<HTMLElement>;
   @ViewChild('iconPickerRef') iconPickerRef?: ElementRef<HTMLElement>;
+  @ViewChild('reactionAddRef') reactionAddRef?: ElementRef<HTMLElement>;
 
   @Output() onTitleChange = new EventEmitter<string>();
   @Output() onBlocksChange = new EventEmitter<Block[]>();
@@ -290,11 +291,18 @@ export class PageView implements OnChanges {
         this.iconPickerOpen.set(false);
       }
     }
+    if (this.reactionPickerOpen()) {
+      const el = this.reactionAddRef?.nativeElement;
+      if (el && !el.contains(target)) {
+        this.reactionPickerOpen.set(false);
+      }
+    }
   }
 
   @HostListener('document:keydown.escape')
   onEscape() {
     this.pageActionsOpen.set(false);
     this.iconPickerOpen.set(false);
+    this.reactionPickerOpen.set(false);
   }
 }

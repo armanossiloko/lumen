@@ -79,6 +79,8 @@ import { fileToIconDataUrl, normalizeIconInput } from '../../icons/icon-utils';
               type="file"
               accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
               class="icon-picker-file"
+              (click)="onFileInputActivate($event)"
+              (cancel)="onFileInputActivate($event)"
               (change)="onFile($event)"
             />
           </label>
@@ -133,7 +135,12 @@ export class IconPicker {
     this.iconChange.emit('');
   }
 
+  onFileInputActivate(event: Event) {
+    event.stopPropagation();
+  }
+
   async onFile(event: Event) {
+    event.stopPropagation();
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';

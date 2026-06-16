@@ -11,7 +11,7 @@
       <div class="sb-section-label">Favorites</div>
       @for (p of favoritePages; track p.id) {
         <button type="button" class="sb-fav-row" (click)="onSelect.emit({ id: p.id })">
-          <span>{{ p.icon }}</span>
+          <app-icon-display [icon]="p.icon" [size]="14" />
           <span>{{ p.title }}</span>
         </button>
       }

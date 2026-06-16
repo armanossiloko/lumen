@@ -325,7 +325,7 @@ export class TreeNode {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, WorkspaceSwitcher, TreeNode],
+  imports: [CommonModule, WorkspaceSwitcher, TreeNode, IconDisplay],
   templateUrl: './sidebar.html',
   styles: []
 })

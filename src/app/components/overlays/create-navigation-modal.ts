@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MarkdownComposer } from '../markdown/markdown-composer';
 import { IconPicker } from '../icon-picker/icon-picker';
+import { backdropMouseDown, backdropMouseUp } from './modal-backdrop';
 
 export interface CreateNavContext {
   mode: 'page' | 'folder';
@@ -17,7 +18,12 @@ export interface CreateNavContext {
   imports: [CommonModule, FormsModule, MarkdownComposer, IconPicker],
   template: `
     @if (ctx) {
-      <div class="nav-create-overlay" (click)="cancel.emit()" role="presentation">
+      <div
+        class="nav-create-overlay"
+        (mousedown)="backdropDown = backdropMouseDown($event)"
+        (mouseup)="onBackdropMouseUp($event)"
+        role="presentation"
+      >
         <div class="nav-create-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
           <div class="nav-create-hd">
             <div class="nav-create-title">{{ ctx.mode === 'page' ? 'New page' : 'New folder' }}</div>
@@ -67,6 +73,8 @@ export interface CreateNavContext {
   `,
 })
 export class CreateNavigationModal implements OnChanges {
+  protected readonly backdropMouseDown = backdropMouseDown;
+
   @Input() ctx: CreateNavContext | null = null;
 
   @Output() cancel = new EventEmitter<void>();
@@ -82,6 +90,14 @@ export class CreateNavigationModal implements OnChanges {
 
   title = '';
   icon = '';
+  backdropDown = false;
+
+  onBackdropMouseUp(event: MouseEvent) {
+    if (backdropMouseUp(event, this.backdropDown)) {
+      this.cancel.emit();
+    }
+    this.backdropDown = false;
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['ctx'] && this.ctx) {

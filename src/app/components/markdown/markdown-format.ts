@@ -31,7 +31,7 @@ export function applyMarkdownFormat(
     case 'bold':
       return wrap(text, start, end, '**', '**', 'bold text');
     case 'italic':
-      return wrap(text, start, end, '*', '*', 'italic text');
+      return wrap(text, start, end, '_', '_', 'italic text');
     case 'strike':
       return wrap(text, start, end, '~~', '~~', 'strikethrough');
     case 'code':
@@ -75,6 +75,26 @@ function wrap(
   placeholder: string,
 ): MarkdownEditResult {
   const selected = text.slice(start, end);
+  const hasWrapBefore = start >= before.length && text.slice(start - before.length, start) === before;
+  const hasWrapAfter = end + after.length <= text.length && text.slice(end, end + after.length) === after;
+
+  if (selected && hasWrapBefore && hasWrapAfter) {
+    const value = text.slice(0, start - before.length) + selected + text.slice(end + after.length);
+    const selStart = start - before.length;
+    return { value, selectionStart: selStart, selectionEnd: selStart + selected.length };
+  }
+
+  if (!selected && hasWrapBefore && hasWrapAfter) {
+    const innerStart = start - before.length;
+    const innerEnd = end + after.length;
+    const inner = text.slice(innerStart, innerEnd);
+    if (inner.startsWith(before) && inner.endsWith(after) && inner.length >= before.length + after.length) {
+      const unwrapped = inner.slice(before.length, inner.length - after.length);
+      const value = text.slice(0, innerStart) + unwrapped + text.slice(innerEnd);
+      return { value, selectionStart: innerStart, selectionEnd: innerStart + unwrapped.length };
+    }
+  }
+
   const inner = selected || placeholder;
   const value = text.slice(0, start) + before + inner + after + text.slice(end);
   const selStart = start + before.length;

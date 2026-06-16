@@ -36,7 +36,7 @@ public class PagesController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("trash")]
+    [HttpGet("~/api/pages/trash")]
     public async Task<ActionResult<object[]>> GetTrash([FromQuery] string? workspaceId = null)
     {
         var query = _context.Pages.Where(p => p.DeletedAt != null);
@@ -50,6 +50,9 @@ public class PagesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<object>> GetPage(string id)
     {
+        if (string.Equals(id, "trash", StringComparison.OrdinalIgnoreCase))
+            return NotFound();
+
         var page = await _context.Pages.FindAsync(id);
         if (page == null || page.DeletedAt != null) return NotFound();
         return Ok(SerializePage(page));

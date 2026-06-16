@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { IconDisplay } from '../icon-picker/icon-display';
 import { PageTemplate } from '../../services/api.service';
 
 @Component({
@@ -71,7 +72,7 @@ export class BacklinksModal {
 @Component({
   selector: 'app-trash-panel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconDisplay],
   template: `
     @if (open) {
       <div class="inbox-overlay" (click)="onClose.emit()">
@@ -81,7 +82,10 @@ export class BacklinksModal {
           </div>
           @for (p of pages; track p.id) {
             <div class="inbox-item">
-              <span>@if (p.icon) { {{ p.icon }} }{{ p.title }}</span>
+              <span class="inbox-item-label">
+                <app-icon-display [icon]="p.icon" [size]="14" />
+                {{ p.title }}
+              </span>
               <button type="button" class="btn btn-ghost btn-sm" (click)="restore.emit(p.id)">Restore</button>
             </div>
           }

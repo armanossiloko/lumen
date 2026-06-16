@@ -778,9 +778,13 @@ export class StateService {
   loadTrash() {
     this.apiService.getTrash(this.currentWorkspaceId()).subscribe({
       next: (pages) => {
-        this.trashPages.set(pages);
+        const normalized = (pages ?? []).map((p, i) =>
+          this.normalizeRemotePage(p as unknown as Record<string, unknown>, String((p as Page).id ?? i)),
+        );
+        this.trashPages.set(normalized);
         this.showTrash.set(true);
       },
+      error: (err) => console.error('Failed to load trash:', err),
     });
   }
 

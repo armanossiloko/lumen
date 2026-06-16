@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, Output, signal, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -17,7 +17,7 @@ import { CommonModule } from '@angular/common';
           <span class="reaction-count">{{ reactionsSafe()[emoji].length }}</span>
         </button>
       }
-      <div class="reaction-add-wrap">
+      <div class="reaction-add-wrap" #reactionAddRef>
         <button
           type="button"
           class="reaction reaction-add"
@@ -56,6 +56,8 @@ export class CommentReactions {
 
   @Output() toggleEmoji = new EventEmitter<string>();
 
+  @ViewChild('reactionAddRef') reactionAddRef?: ElementRef<HTMLElement>;
+
   pickerOpen = signal(false);
   palette = ['👍', '❤️', '🎉', '🚀', '👀', '🌱', '🔥', '💯', '✅', '👋'];
 
@@ -73,6 +75,21 @@ export class CommentReactions {
 
   pick(e: string): void {
     this.toggleEmoji.emit(e);
+    this.pickerOpen.set(false);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    if (!this.pickerOpen()) return;
+    const el = this.reactionAddRef?.nativeElement;
+    const target = event.target as Node;
+    if (el && !el.contains(target)) {
+      this.pickerOpen.set(false);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape() {
     this.pickerOpen.set(false);
   }
 }

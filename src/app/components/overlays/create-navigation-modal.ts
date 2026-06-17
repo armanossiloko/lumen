@@ -1,4 +1,17 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ViewChild } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  OnChanges,
+  SimpleChanges,
+  ViewChild,
+  ElementRef,
+  signal,
+  afterNextRender,
+  inject,
+  Injector,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MarkdownComposer } from '../markdown/markdown-composer';
@@ -24,7 +37,13 @@ export interface CreateNavContext {
         (mouseup)="onBackdropMouseUp($event)"
         role="presentation"
       >
-        <div class="nav-create-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <div
+          class="nav-create-dialog"
+          (mousedown)="$event.stopPropagation()"
+          (click)="$event.stopPropagation()"
+          role="dialog"
+          aria-modal="true"
+        >
           <div class="nav-create-hd">
             <div class="nav-create-title">{{ ctx.mode === 'page' ? 'New page' : 'New folder' }}</div>
             <button type="button" class="nav-create-x" (click)="cancel.emit()" aria-label="Close">×</button>
@@ -35,7 +54,16 @@ export interface CreateNavContext {
 
           <label class="nav-create-field">
             <span class="nav-create-label">Title</span>
-            <input type="text" class="nav-create-input" [(ngModel)]="title" name="navTitle" placeholder="Title…" />
+            <input
+              #titleInput
+              type="text"
+              class="nav-create-input"
+              [ngModel]="title()"
+              (ngModelChange)="title.set($event)"
+              name="navTitle"
+              placeholder="Title…"
+              autocomplete="off"
+            />
           </label>
 
           <div class="nav-create-field">
@@ -63,7 +91,7 @@ export interface CreateNavContext {
 
           <div class="nav-create-foot">
             <button type="button" class="btn btn-ghost" (click)="cancel.emit()">Cancel</button>
-            <button type="button" class="btn btn-primary" [disabled]="!title.trim()" (click)="confirm()">
+            <button type="button" class="btn btn-primary" [disabled]="!title().trim()" (click)="confirm()">
               {{ ctx.mode === 'page' ? 'Create page' : 'Create folder' }}
             </button>
           </div>
@@ -74,6 +102,7 @@ export interface CreateNavContext {
 })
 export class CreateNavigationModal implements OnChanges {
   protected readonly backdropMouseDown = backdropMouseDown;
+  private readonly injector = inject(Injector);
 
   @Input() ctx: CreateNavContext | null = null;
 
@@ -87,8 +116,9 @@ export class CreateNavigationModal implements OnChanges {
   }>();
 
   @ViewChild('bodyComposer') private bodyComposer?: MarkdownComposer;
+  @ViewChild('titleInput') private titleInput?: ElementRef<HTMLInputElement>;
 
-  title = '';
+  title = signal('');
   icon = '';
   backdropDown = false;
 
@@ -101,18 +131,32 @@ export class CreateNavigationModal implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['ctx'] && this.ctx) {
-      this.title = this.ctx.prefilledTitle ?? '';
+      this.title.set(this.ctx.prefilledTitle ?? '');
       this.icon = '';
+      afterNextRender(() => this.focusTitleInput(), { injector: this.injector });
     }
   }
 
+  private focusTitleInput(): void {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active !== this.titleInput?.nativeElement) {
+      active.blur();
+    }
+    const el = this.titleInput?.nativeElement;
+    if (!el) return;
+    el.focus();
+    const len = el.value.length;
+    el.setSelectionRange(len, len);
+  }
+
   confirm() {
-    if (!this.ctx || !this.title.trim()) return;
+    const trimmedTitle = this.title().trim();
+    if (!this.ctx || !trimmedTitle) return;
     const md =
       this.ctx.mode === 'page' ? (this.bodyComposer?.currentDraft()?.trim() ?? '') : '';
     this.confirmCreate.emit({
       mode: this.ctx.mode,
-      title: this.title.trim(),
+      title: trimmedTitle,
       icon: this.icon.trim(),
       markdownBody: md,
       parentId: this.ctx.parentId,

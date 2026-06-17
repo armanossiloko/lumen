@@ -736,19 +736,33 @@ export class StateService {
   }
 
   loadBacklinks(pageId: string) {
+    this.backlinks.set([]);
+    this.showBacklinks.set(true);
     this.apiService.getBacklinks(pageId).subscribe({
       next: (links) => {
-        this.backlinks.set(links);
-        this.showBacklinks.set(true);
+        if (this.currentId() !== pageId) return;
+        this.backlinks.set(links ?? []);
+      },
+      error: (err) => {
+        console.error('Failed to load backlinks:', err);
+        if (this.currentId() !== pageId) return;
+        this.backlinks.set([]);
       },
     });
   }
 
   loadHistory(pageId: string) {
+    this.pageHistory.set([]);
+    this.showHistory.set(true);
     this.apiService.getHistory(pageId).subscribe({
       next: (h) => {
-        this.pageHistory.set(h);
-        this.showHistory.set(true);
+        if (this.currentId() !== pageId) return;
+        this.pageHistory.set(h ?? []);
+      },
+      error: (err) => {
+        console.error('Failed to load page history:', err);
+        if (this.currentId() !== pageId) return;
+        this.pageHistory.set([]);
       },
     });
   }

@@ -812,6 +812,14 @@ export class StateService {
   }
 
   deletePageToTrash(pageId: string) {
+    const uid = this.currentUserId();
+    if (uid && this.favorites().has(pageId)) {
+      const next = new Set(this.favorites());
+      next.delete(pageId);
+      this.favorites.set(next);
+      this.apiService.removeFavorite(pageId, uid).subscribe();
+    }
+
     const tree = removeTreeNodeById([...this.tree()], pageId);
     this.tree.set(tree);
     this.persistTree(tree);

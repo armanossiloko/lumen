@@ -1,4 +1,16 @@
-import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  signal,
+  OnChanges,
+  SimpleChanges,
+  ElementRef,
+  inject,
+  afterNextRender,
+  Injector,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Block as IBlock, TextPart, TodoItem } from '../../models';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -8,9 +20,9 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './block.html',
-  styleUrls: ['./block.css']
+  styleUrls: ['./block.css'],
 })
-export class Block {
+export class Block implements OnChanges {
   @Input() block!: IBlock;
   @Input() idx!: number;
   @Input() isFocused: boolean = false;
@@ -26,8 +38,25 @@ export class Block {
   @Output() onCommentClick = new EventEmitter<number>();
   
   hover = signal(false);
-  
-  constructor(private sanitizer: DomSanitizer) {}
+  private readonly injector = inject(Injector);
+
+  constructor(
+    private sanitizer: DomSanitizer,
+    private hostRef: ElementRef<HTMLElement>,
+  ) {}
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['isFocused']?.currentValue && this.isFocused) {
+      afterNextRender(() => this.focusEditable(), { injector: this.injector });
+    }
+  }
+
+  plainText(): string {
+    const t = this.block.text;
+    if (typeof t === 'string') return t;
+    if (Array.isArray(t)) return t.map((p) => p.t).join('');
+    return '';
+  }
   
   get showHandle() {
     return !this.readOnly && (this.hover() || this.isFocused);
@@ -88,6 +117,40 @@ export class Block {
     const target = event.target as HTMLElement;
     const newBlock = { ...this.block, [field]: target.innerText };
     this.onChange.emit({ idx: this.idx, block: newBlock });
+  }
+
+  handleParagraphBlur(event: Event) {
+    if (this.readOnly) return;
+    const target = event.target as HTMLElement;
+    let text = target.innerText;
+    if (text === 'Type something…') text = '';
+    const newBlock = { ...this.block, text };
+    this.onChange.emit({ idx: this.idx, block: newBlock });
+  }
+
+  private focusEditable(): void {
+    const el = this.hostRef.nativeElement.querySelector(
+      '[contenteditable="true"]',
+    ) as HTMLElement | null;
+    if (!el) return;
+
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active !== el) {
+      active.blur();
+    }
+
+    el.focus();
+    const text = el.innerText;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    if (this.block.type === 'p' && text === 'Type something…') {
+      range.collapse(true);
+    } else {
+      range.collapse(false);
+    }
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
   }
   
   handleKeyDown(event: KeyboardEvent) {

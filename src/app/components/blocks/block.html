@@ -46,7 +46,13 @@
         >{{block.text}}</h3>
       }
       @case ('p') {
-        <p class="doc-p" [innerHTML]="renderInline(block.text!)"></p>
+        <p
+          class="doc-p"
+          [attr.contenteditable]="readOnly ? false : true"
+          (focus)="onFocus.emit(idx)"
+          (blur)="handleParagraphBlur($event)"
+          (keydown)="handleKeyDown($event)"
+        >{{ plainText() }}</p>
       }
       @case ('ul') {
         <ul class="doc-list">

@@ -57,14 +57,22 @@
       @case ('ul') {
         <ul class="doc-list">
           @for (item of block.items; track $index) {
-            <li>{{item}}</li>
+            <li
+              [attr.contenteditable]="readOnly ? false : true"
+              (focus)="onFocus.emit(idx)"
+              (blur)="handleListBlur($event)"
+            >{{ item }}</li>
           }
         </ul>
       }
       @case ('ol') {
         <ol class="doc-list doc-list--ol">
           @for (item of block.items; track $index) {
-            <li>{{item}}</li>
+            <li
+              [attr.contenteditable]="readOnly ? false : true"
+              (focus)="onFocus.emit(idx)"
+              (blur)="handleListBlur($event)"
+            >{{ item }}</li>
           }
         </ol>
       }
@@ -81,7 +89,11 @@
                     <svg width="9" height="9" viewBox="0 0 9 9"><path d="M1.5 4.8L3.5 6.8L7.5 2.5" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   }
                 </button>
-                <span>{{item.text}}</span>
+                <span
+                  [attr.contenteditable]="readOnly ? false : true"
+                  (focus)="onFocus.emit(idx)"
+                  (blur)="handleTodoItemBlur(i, $event)"
+                >{{ item.text }}</span>
                 @if (item.commentCount && item.commentCount > 0) {
                   <span class="todo-comments">{{item.commentCount}} 💬</span>
                 }
@@ -99,7 +111,16 @@
               @case ('danger') { ⛔ }
             }
           </div>
-          <div class="callout-body" [innerHTML]="renderInline(block.text)"></div>
+          <div
+            class="callout-body"
+            [attr.contenteditable]="readOnly ? false : true"
+            (focus)="onFocus.emit(idx)"
+            (blur)="handleSimpleTextBlur($event)"
+          >@if (readOnly) {
+            <span [innerHTML]="renderInline(block.text)"></span>
+          } @else {
+            {{ plainText() }}
+          }</div>
         </div>
       }
       @case ('code') {
@@ -108,11 +129,28 @@
             <span class="code-lang">{{block.lang}}</span>
             <button type="button" class="code-copy" (click)="copyCode()">Copy</button>
           </div>
-          <pre class="code-pre"><code [innerHTML]="highlightCode(block.code || '', block.lang || '')"></code></pre>
+          <pre class="code-pre"><code
+            [attr.contenteditable]="readOnly ? false : true"
+            (focus)="onFocus.emit(idx)"
+            (blur)="handleCodeBlur($event)"
+          >@if (readOnly) {
+            <span [innerHTML]="highlightCode(block.code || '', block.lang || '')"></span>
+          } @else {
+            {{ block.code }}
+          }</code></pre>
         </div>
       }
       @case ('quote') {
-        <blockquote class="doc-quote" [innerHTML]="renderInline(block.text)"></blockquote>
+        <blockquote
+          class="doc-quote"
+          [attr.contenteditable]="readOnly ? false : true"
+          (focus)="onFocus.emit(idx)"
+          (blur)="handleSimpleTextBlur($event)"
+        >@if (readOnly) {
+          <span [innerHTML]="renderInline(block.text)"></span>
+        } @else {
+          {{ plainText() }}
+        }</blockquote>
       }
       @case ('divider') {
         <hr class="doc-divider" />
@@ -123,7 +161,11 @@
             <thead>
               <tr>
                 @for (header of block.headers; track $index) {
-                  <th>{{header}}</th>
+                  <th
+                    [attr.contenteditable]="readOnly ? false : true"
+                    (focus)="onFocus.emit(idx)"
+                    (blur)="handleTableBlur()"
+                  >{{ header }}</th>
                 }
               </tr>
             </thead>
@@ -131,7 +173,11 @@
               @for (row of block.rows; track $index) {
                 <tr>
                   @for (cell of row; track $index) {
-                    <td>{{cell}}</td>
+                    <td
+                      [attr.contenteditable]="readOnly ? false : true"
+                      (focus)="onFocus.emit(idx)"
+                      (blur)="handleTableBlur()"
+                    >{{ cell }}</td>
                   }
                 </tr>
               }
@@ -145,7 +191,11 @@
             <span class="doc-image-label">{{block.placeholder || 'IMAGE'}}</span>
           </div>
           @if (block.caption) {
-            <figcaption>{{block.caption}}</figcaption>
+            <figcaption
+              [attr.contenteditable]="readOnly ? false : true"
+              (focus)="onFocus.emit(idx)"
+              (blur)="handleCaptionBlur($event)"
+            >{{ block.caption }}</figcaption>
           }
         </figure>
       }
@@ -159,7 +209,11 @@
             <span class="doc-video-dur">04:12</span>
           </div>
           @if (block.caption) {
-            <figcaption>{{block.caption}}</figcaption>
+            <figcaption
+              [attr.contenteditable]="readOnly ? false : true"
+              (focus)="onFocus.emit(idx)"
+              (blur)="handleCaptionBlur($event)"
+            >{{ block.caption }}</figcaption>
           }
         </figure>
       }

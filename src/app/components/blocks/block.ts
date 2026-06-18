@@ -120,12 +120,61 @@ export class Block implements OnChanges {
   }
 
   handleParagraphBlur(event: Event) {
+    this.handleSimpleTextBlur(event);
+  }
+
+  handleSimpleTextBlur(event: Event) {
     if (this.readOnly) return;
     const target = event.target as HTMLElement;
     let text = target.innerText;
     if (text === 'Type something…') text = '';
     const newBlock = { ...this.block, text };
     this.onChange.emit({ idx: this.idx, block: newBlock });
+  }
+
+  handleListBlur(_event: Event) {
+    if (this.readOnly) return;
+    const items = Array.from(
+      this.hostRef.nativeElement.querySelectorAll('.doc-list li[contenteditable="true"]'),
+    ).map((li) => (li as HTMLElement).innerText);
+    this.onChange.emit({ idx: this.idx, block: { ...this.block, items } });
+  }
+
+  handleTodoItemBlur(itemIdx: number, event: Event) {
+    if (this.readOnly) return;
+    const text = (event.target as HTMLElement).innerText;
+    const items = (this.block.items ?? []).map((item, i) => {
+      if (i === itemIdx && typeof item === 'object') {
+        return { ...item, text };
+      }
+      return item;
+    });
+    this.onChange.emit({ idx: this.idx, block: { ...this.block, items } });
+  }
+
+  handleCodeBlur(event: Event) {
+    if (this.readOnly) return;
+    const code = (event.target as HTMLElement).innerText;
+    this.onChange.emit({ idx: this.idx, block: { ...this.block, code } });
+  }
+
+  handleTableBlur() {
+    if (this.readOnly) return;
+    const table = this.hostRef.nativeElement.querySelector('.doc-table');
+    if (!table) return;
+    const headers = Array.from(table.querySelectorAll('thead th')).map(
+      (th) => (th as HTMLElement).innerText,
+    );
+    const rows = Array.from(table.querySelectorAll('tbody tr')).map((tr) =>
+      Array.from(tr.querySelectorAll('td')).map((td) => (td as HTMLElement).innerText),
+    );
+    this.onChange.emit({ idx: this.idx, block: { ...this.block, headers, rows } });
+  }
+
+  handleCaptionBlur(event: Event) {
+    if (this.readOnly) return;
+    const caption = (event.target as HTMLElement).innerText;
+    this.onChange.emit({ idx: this.idx, block: { ...this.block, caption } });
   }
 
   private focusEditable(): void {
@@ -143,7 +192,8 @@ export class Block implements OnChanges {
     const text = el.innerText;
     const range = document.createRange();
     range.selectNodeContents(el);
-    if (this.block.type === 'p' && text === 'Type something…') {
+    const placeholders = new Set(['Type something…', 'Add a note here.', 'A quote.']);
+    if (placeholders.has(text)) {
       range.collapse(true);
     } else {
       range.collapse(false);
